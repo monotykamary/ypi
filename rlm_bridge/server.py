@@ -29,8 +29,8 @@ app = Flask(__name__)
 CORS(app)
 
 # RLM configuration defaults
-DEFAULT_BACKEND = os.getenv("RLM_BACKEND", "openai")
-DEFAULT_MODEL = os.getenv("RLM_MODEL", "gpt-4o-mini")
+DEFAULT_BACKEND = os.getenv("RLM_BACKEND", "openrouter")
+DEFAULT_MODEL = os.getenv("RLM_MODEL", "google/gemini-3-flash-preview")
 DEFAULT_MAX_RECURSION = int(os.getenv("RLM_MAX_RECURSION", "10"))
 
 
@@ -95,12 +95,23 @@ def run_rlm_completion(context: str, query: str, config: RlmConfig) -> Completio
         from rlm import RLM
         
         # Initialize RLM with config
+        # Get API key from environment based on backend
+        api_key = None
+        if config.backend == "openrouter":
+            api_key = os.getenv("OPENROUTER_API_KEY")
+        elif config.backend == "openai":
+            api_key = os.getenv("OPENAI_API_KEY")
+        elif config.backend == "anthropic":
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+        
+        backend_kwargs = {"model_name": config.model_name}
+        if api_key:
+            backend_kwargs["api_key"] = api_key
+            
         rlm = RLM(
             backend=config.backend,
-            backend_kwargs={
-                "model_name": config.model_name,
-            },
-            max_recursion_depth=config.max_recursion_depth,
+            backend_kwargs=backend_kwargs,
+            max_depth=config.max_recursion_depth,
             # Note: environment setting for sandbox would go here
         )
         
