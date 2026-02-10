@@ -1,28 +1,14 @@
 {
   "name": "pi-rlm-extension",
-  "version": "0.1.0",
-  "description": "Pi extension that swaps LLM provider with RLM-backed provider",
-  "main": "extension.ts",
+  "version": "0.2.0",
+  "description": "Pi extension that routes completions through RLM (Recursive Language Model)",
   "type": "module",
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
-  },
   "pi": {
-    "type": "extension",
-    "activationEvents": ["onStartup"],
-    "contributes": {
-      "providers": ["rlm"],
-      "commands": [
-        {
-          "command": "rlm",
-          "title": "Toggle RLM Mode"
-        }
-      ]
-    }
+    "extensions": ["./extension.ts"]
   },
   "devDependencies": {
-    "@mariozechner/pi-ai": "^0.1.0",
+    "@mariozechner/pi-ai": "^0.52.0",
+    "@mariozechner/pi-coding-agent": "^0.52.0",
     "typescript": "^5.0.0"
   },
   "keywords": ["pi", "extension", "rlm", "llm", "recursive"],

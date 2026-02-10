@@ -107,13 +107,6 @@ def run_rlm_completion(context: str, query: str, config: RlmConfig) -> Completio
         backend_kwargs = {"model_name": config.model_name}
         if api_key:
             backend_kwargs["api_key"] = api_key
-            
-        rlm = RLM(
-            backend=config.backend,
-            backend_kwargs=backend_kwargs,
-            max_depth=config.max_recursion_depth,
-            # Note: environment setting for sandbox would go here
-        )
         
         # Build the full prompt
         # RLM handles context offloading internally
@@ -126,18 +119,46 @@ Current request:
         else:
             full_prompt = query
         
+        logger.info(f"RLM config: backend={config.backend}, model={config.model_name}, max_depth={config.max_recursion_depth}")
+        logger.info(f"Context length: {len(context)} chars, Query length: {len(query)} chars")
+        logger.info(f"Full prompt length: {len(full_prompt)} chars")
+        
+        # Ensure we have a valid cwd (RLM's LocalREPL needs it)
+        work_dir = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(work_dir)
+        logger.info(f"Working directory: {work_dir}")
+            
+        rlm = RLM(
+            backend=config.backend,
+            backend_kwargs=backend_kwargs,
+            max_depth=config.max_recursion_depth,
+            verbose=True,
+        )
+        
+        logger.info("RLM instance created, calling completion...")
+        
         # Run completion
         result = rlm.completion(full_prompt)
         
+        logger.info(f"RLM completion done. Response length: {len(result.response)} chars")
+        logger.info(f"RLM result fields: {vars(result) if hasattr(result, '__dict__') else dir(result)}")
+        
+        # Extract usage from UsageSummary if available
+        usage_summary = getattr(result, "usage_summary", None)
+        usage = {}
+        if usage_summary:
+            logger.info(f"UsageSummary: {vars(usage_summary) if hasattr(usage_summary, '__dict__') else usage_summary}")
+            usage = {
+                "promptTokens": getattr(usage_summary, "prompt_tokens", 0) or getattr(usage_summary, "input_tokens", 0) or 0,
+                "completionTokens": getattr(usage_summary, "completion_tokens", 0) or getattr(usage_summary, "output_tokens", 0) or 0,
+            }
+        
         return CompletionResponse(
             text=result.response,
-            usage={
-                "promptTokens": getattr(result, "prompt_tokens", 0),
-                "completionTokens": getattr(result, "completion_tokens", 0),
-            },
+            usage=usage,
             metadata={
-                "recursionDepth": getattr(result, "recursion_depth", 0),
-                "totalCalls": getattr(result, "total_calls", 1),
+                "recursionDepth": getattr(result, "depth", 0),
+                "executionTime": getattr(result, "execution_time", 0),
             }
         )
         
