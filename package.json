@@ -1,16 +1,19 @@
 {
   "name": "pi-rlm-extension",
-  "version": "0.2.0",
-  "description": "Pi extension that routes completions through RLM (Recursive Language Model)",
+  "version": "0.3.0",
+  "description": "Pi extension: recursive tool-use via completeWithTools() (Approach 3)",
   "type": "module",
   "pi": {
     "extensions": ["./extension.ts"]
   },
+  "dependencies": {
+    "@mariozechner/pi-ai": "file:../pi-mono/packages/ai",
+    "@sinclair/typebox": "^0.34.41"
+  },
   "devDependencies": {
-    "@mariozechner/pi-ai": "^0.52.0",
     "@mariozechner/pi-coding-agent": "^0.52.0",
     "typescript": "^5.0.0"
   },
-  "keywords": ["pi", "extension", "rlm", "llm", "recursive"],
+  "keywords": ["pi", "extension", "rlm", "tool-use", "recursive"],
   "license": "MIT"
 }
