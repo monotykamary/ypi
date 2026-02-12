@@ -1,0 +1,34 @@
+#!/bin/bash
+# rpi — Recursive Pi
+#
+# Launches Pi as a Recursive Language Model. The LLM gets a system prompt
+# that teaches it to use bash + rlm_query for divide-and-conquer reasoning
+# over large contexts.
+#
+# Usage:
+#   rpi                              # interactive recursive pi
+#   rpi "What is in this repo?"      # one-shot with -p
+#   rpi --provider anthropic --model claude-sonnet-4-5-20250929 "question"
+#
+# Environment overrides:
+#   RLM_PROVIDER      — LLM provider for sub-calls (default: cerebras)
+#   RLM_MODEL         — LLM model for sub-calls (default: gpt-oss-120b)
+#   RLM_MAX_DEPTH     — max recursion depth (default: 3)
+
+set -euo pipefail
+
+# Resolve the directory where rpi lives (and where rlm_query + SYSTEM_PROMPT.md are)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Put rlm_query on PATH so Pi's bash tool can find it
+export PATH="$SCRIPT_DIR:$PATH"
+
+# Initialize RLM environment
+export RLM_DEPTH="${RLM_DEPTH:-0}"
+export RLM_MAX_DEPTH="${RLM_MAX_DEPTH:-3}"
+export RLM_PROVIDER="${RLM_PROVIDER:-cerebras}"
+export RLM_MODEL="${RLM_MODEL:-gpt-oss-120b}"
+export RLM_SYSTEM_PROMPT="$SCRIPT_DIR/SYSTEM_PROMPT.md"
+
+# Launch Pi with the RLM system prompt, passing all args through
+exec pi --system-prompt "$SCRIPT_DIR/SYSTEM_PROMPT.md" "$@"
