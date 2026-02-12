@@ -174,7 +174,7 @@ an explicit "short context, direct approach" example.
 ## File Layout
 
 ```
-pi-rlm-extension/
+ypi/
 ├── rlm_query              # The recursive bash helper (chmod +x)
 ├── SYSTEM_PROMPT.md       # RLM system prompt for Pi
 ├── ARCHITECTURE.md        # This file
@@ -216,9 +216,9 @@ export RLM_DEPTH=0
 export RLM_MAX_DEPTH=3
 export RLM_PROVIDER=anthropic
 export RLM_MODEL=claude-sonnet-4-5-20250929
-export RLM_SYSTEM_PROMPT="/path/to/pi-rlm-extension/SYSTEM_PROMPT.md"
+export RLM_SYSTEM_PROMPT="/path/to/ypi/SYSTEM_PROMPT.md"
 export PI_TRACE_FILE="/tmp/rlm_trace.log"
-export PATH="/path/to/pi-rlm-extension:$PATH"
+export PATH="/path/to/ypi:$PATH"
 
 # Test: no pipe (inherit context)
 rlm_query "What university did the user graduate from?"

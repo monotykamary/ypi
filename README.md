@@ -1,90 +1,133 @@
-# pi-rlm-extension
+# ypi
 
-True Recursive Language Model for [Pi Coding Agent](https://github.com/badlogic/pi-mono). A faithful port of [Python RLM](https://github.com/SuperAGI/recursive-lm) to Pi's bash environment.
+**Y-Combinator Pi** — a recursive coding agent built on [Pi](https://github.com/badlogic/pi-mono).
 
-## How It Works
+Named after the [Y combinator](https://en.wikipedia.org/wiki/Fixed-point_combinator#Y_combinator) from lambda calculus — the fixed-point combinator that enables recursion. `ypi` is Pi that can call itself.
 
-Pi already has a bash REPL as a tool. We add one function — `rlm_query` — and a system prompt that teaches Pi to use it recursively. That's the whole trick.
+Inspired by [Recursive Language Models](https://github.com/SuperAGI/recursive-lm) (RLM), which showed that an LLM with a code REPL and a `llm_query()` function can recursively decompose problems, analyze massive contexts, and write code — all through self-delegation.
+
+## The Idea
+
+Pi already has a bash REPL. We add one function — `rlm_query` — and a system prompt that teaches Pi to use it recursively. Each child gets its own [jj](https://martinvonz.github.io/jj/) workspace for file isolation. That's the whole trick.
 
 ```
-┌─────────────────────────────────────┐
-│  Pi (depth 0)                       │
-│  System prompt: SYSTEM_PROMPT.md    │
-│  Context: $CONTEXT (file on disk)   │
-│  Tools: bash (grep, sed, cat...)    │
-│                                     │
-│  Model runs:                        │
-│    grep -n "award" "$CONTEXT"       │
-│    sed -n '150,175p' "$CONTEXT" \   │
-│      | rlm_query "What award?"      │
-│            │                        │
-│            ▼                        │
-│    ┌───────────────────────┐        │
-│    │  Pi (depth 1)         │        │
-│    │  Same system prompt   │        │
-│    │  Context: piped chunk │        │
-│    │  Returns: "Turing"    │        │
-│    └───────────────────────┘        │
-│                                     │
-│  Model says: "ACM Turing Award"     │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  ypi (depth 0)                           │
+│  Tools: bash, rlm_query                  │
+│  Workspace: default                      │
+│                                          │
+│  > grep -n "bug" src/*.py                │
+│  > sed -n '50,80p' src/app.py \          │
+│      | rlm_query "Fix this bug"          │
+│            │                             │
+│            ▼                             │
+│    ┌────────────────────────────┐        │
+│    │  ypi (depth 1)            │        │
+│    │  Workspace: jj isolated   │        │
+│    │  Edits files safely       │        │
+│    │  Returns: patch on stdout │        │
+│    └────────────────────────────┘        │
+│                                          │
+│  > jj squash --from <child-change>       │
+│  # absorb the fix into our working copy  │
+└──────────────────────────────────────────┘
 ```
-
-### The Three Pieces (same as Python RLM)
-
-| Piece | Python RLM | Pi RLM |
-|---|---|---|
-| System prompt | `RLM_SYSTEM_PROMPT` in code | `SYSTEM_PROMPT.md` file |
-| Context | `context` Python variable | `$CONTEXT` file on disk |
-| Sub-call function | `llm_query("prompt")` | `rlm_query "prompt"` |
 
 ## Quick Start
 
 ```bash
-# 1. Set up environment
-export CONTEXT="/path/to/your/context.txt"
-export RLM_SYSTEM_PROMPT="$PWD/SYSTEM_PROMPT.md"
-export RLM_PROVIDER=anthropic
-export RLM_MODEL=claude-sonnet-4-5-20250929
-export RLM_MAX_DEPTH=3
-export PATH="$PWD:$PATH"  # So rlm_query is on PATH
+# Install
+git clone https://github.com/rawwerks/ypi.git
+cd ypi
+git submodule update --init --depth 1  # pulls pi-mono
 
-# 2. Ask a question
-rlm_query "What university did the user graduate from?"
+# Add to PATH
+export PATH="$PWD:$PATH"
 
-# 3. Or pipe a chunk for targeted analysis
-sed -n '100,200p' "$CONTEXT" | rlm_query "Who is the author?"
+# Run (interactive)
+ypi
+
+# Run (one-shot)
+ypi "Refactor the error handling in this repo"
+
+# Run with a different model
+ypi --provider anthropic --model claude-sonnet-4-5-20250929 "What does this codebase do?"
 ```
+
+## How It Works
+
+### The Three Pieces (same as Python RLM)
+
+| Piece | Python RLM | ypi |
+|---|---|---|
+| System prompt | `RLM_SYSTEM_PROMPT` | `SYSTEM_PROMPT.md` |
+| Context / REPL | Python `context` variable | `$CONTEXT` file + bash |
+| Sub-call function | `llm_query("prompt")` | `rlm_query "prompt"` |
+
+### Recursion
+
+`rlm_query` spawns a child Pi process with the same system prompt and tools. The child can call `rlm_query` too, creating a recursive tree:
+
+```
+Depth 0 (root)    → full Pi with bash + rlm_query
+  Depth 1 (child) → full Pi with bash + rlm_query, own jj workspace
+    Depth 2 (leaf) → plain LM call, no tools (RLM_MAX_DEPTH reached)
+```
+
+### File Isolation with jj
+
+Each recursive child gets its own [jj workspace](https://martinvonz.github.io/jj/latest/working-copy/):
+
+- Child edits files in isolation — parent's working copy is untouched
+- Parent reviews child's work via `jj diff -r <change-id>`
+- Parent absorbs useful edits via `jj squash --from <change-id>`
+- Workspace is automatically cleaned up when the child exits
+
+### Guardrails
+
+| Feature | Env var | What it does |
+|---------|---------|-------------|
+| Timeout | `RLM_TIMEOUT=60` | Wall-clock limit for entire recursive tree |
+| Call limit | `RLM_MAX_CALLS=20` | Max total `rlm_query` invocations |
+| Model routing | `RLM_CHILD_MODEL=haiku` | Use cheaper model for sub-calls |
+| Depth limit | `RLM_MAX_DEPTH=3` | How deep recursion can go |
+| jj disable | `RLM_JJ=0` | Skip workspace isolation |
+| Tracing | `PI_TRACE_FILE=/tmp/trace.log` | Log all calls with timing |
 
 ## Files
 
 | File | What |
 |---|---|
-| `rlm_query` | The recursive bash helper — Pi's `llm_query()` |
-| `SYSTEM_PROMPT.md` | Teaches Pi how to be an RLM |
-| `ARCHITECTURE.md` | Deep technical notes, bugs found, design decisions |
-| `extension.ts` | Earlier approach: Pi extension with tool-use (Approach 3) |
-| `rlm_bridge/` | Earlier approach: Python bridge server (Approach 2) |
+| `ypi` | Launcher — sets up env, starts Pi as a recursive agent |
+| `rlm_query` | The recursive sub-call function (Pi's `llm_query()`) |
+| `SYSTEM_PROMPT.md` | Teaches the LLM to be recursive + edit code |
+| `pi-mono/` | Git submodule — upstream [Pi coding agent](https://github.com/badlogic/pi-mono) |
+| `tests/` | 54 tests: unit (mock pi), guardrails, e2e (real LLM) |
+| `AGENTS.md` | Instructions for the agent (read by ypi itself) |
+| `ARCHITECTURE.md` | Technical deep-dive, bugs found, design decisions |
 
-## Environment Variables
+## Testing
 
-| Variable | Description | Default |
-|---|---|---|
-| `CONTEXT` | Path to context file on disk | (required) |
-| `RLM_SYSTEM_PROMPT` | Path to `SYSTEM_PROMPT.md` | (required) |
-| `RLM_PROVIDER` | LLM provider | `cerebras` |
-| `RLM_MODEL` | LLM model ID | `gpt-oss-120b` |
-| `RLM_MAX_DEPTH` | Max recursion depth | `3` |
-| `PI_TRACE_FILE` | Trace log path (optional) | (none) |
+```bash
+make test-fast    # 54 tests, no LLM calls, seconds
+make test-e2e     # Real LLM calls, costs ~$0.05
+make test         # Both
+```
 
-## For LongMemEval
+## Background
 
-See `longmemeval-rlm/experiments/013_pi_recursive_bash/` for the experiment runner that wraps `rlm_query` with concurrency, tracing, and scoring.
+ypi went through four approaches before landing on the current design:
 
-## Architecture
+1. **Tool-use REPL** (exp 010/012) — Pi's `completeWithTools()`, ReAct loop. 77.6% on LongMemEval.
+2. **Python bridge** (`rlm_bridge/`) — HTTP server between Pi and Python RLM. Too complex.
+3. **Pi extension** (`extension.ts`) — Custom provider with search tools. Not true recursion.
+4. **Bash RLM** (`rlm_query` + `SYSTEM_PROMPT.md`) — True recursion via bash. **Current approach.**
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical breakdown, including:
-- Mapping from Python RLM to Pi/bash
-- The three critical bugs and their fixes
-- Stdin detection in subprocess contexts
-- System prompt design philosophy
+The key insight: Pi's bash tool **is** the REPL. `rlm_query` **is** `llm_query()`. No bridge needed.
+
+## See Also
+
+- [Pi coding agent](https://github.com/badlogic/pi-mono) — the underlying agent
+- [Recursive Language Models](https://github.com/SuperAGI/recursive-lm) — the paper/code that inspired this
+- [rlm-cli](https://github.com/rawwerks/rlm-cli) — our Python RLM CLI (budget, timeout, model routing)
+- [DSPy](https://github.com/rawwerks/dspy) — our fork with `dspy.CLI` for optimizable CLI agents

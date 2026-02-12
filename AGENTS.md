@@ -1,4 +1,4 @@
-# Agent Instructions — pi-rlm-extension
+# Agent Instructions — ypi
 
 ## Version Control: Use jj, not git
 
@@ -30,12 +30,12 @@ edits appear as separate changes in `jj log` that you can review and absorb.
 
 ## You Are The Recursion
 
-When you run under `rpi`, **you are a recursive LLM**. You have `rlm_query` on
+When you run under `ypi`, **you are a recursive LLM**. You have `rlm_query` on
 your PATH. You can spawn sub-LLMs. Those sub-LLMs can spawn sub-sub-LLMs. This
 is not a metaphor — it's your actual execution environment.
 
 This repo builds the infrastructure that makes YOU work. When you modify
-`rlm_query`, `SYSTEM_PROMPT.md`, or `rpi`, you are modifying yourself.
+`rlm_query`, `SYSTEM_PROMPT.md`, or `ypi`, you are modifying yourself.
 Tread carefully, test constantly.
 
 ## Meta-Awareness
@@ -58,9 +58,9 @@ delegation fails, that's a bug you just found.
 ## Project Layout
 
 ```
-pi-rlm-extension/
+ypi/
 ├── rlm_query              # THE recursive bash helper — this is llm_query()
-├── rpi                    # Launcher: sets up env and starts Pi as RLM
+├── ypi                    # Launcher: sets up env and starts Pi as RLM
 ├── SYSTEM_PROMPT.md       # System prompt — teaches the LLM to be recursive
 ├── ARCHITECTURE.md        # Deep technical notes, bugs, design decisions
 ├── AGENTS.md              # This file — instructions for YOU, the agent

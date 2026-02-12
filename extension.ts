@@ -1,8 +1,8 @@
 /**
  * Pi RLM Extension — Status indicator for recursive mode.
  *
- * Shows "RLM ↻{depth}" in the status bar when running under rpi.
- * No custom provider — rpi uses Pi's native model with a system prompt.
+ * Shows "RLM ↻{depth}" in the status bar when running under ypi.
+ * No custom provider — ypi uses Pi's native model with a system prompt.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";

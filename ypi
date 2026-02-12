@@ -1,14 +1,14 @@
 #!/bin/bash
-# rpi — Recursive Pi
+# ypi — Y-Combinator Pi — Recursive Coding Agent
 #
 # Launches Pi as a Recursive Language Model. The LLM gets a system prompt
 # that teaches it to use bash + rlm_query for divide-and-conquer reasoning
 # over large contexts.
 #
 # Usage:
-#   rpi                              # interactive recursive pi
-#   rpi "What is in this repo?"      # one-shot with -p
-#   rpi --provider anthropic --model claude-sonnet-4-5-20250929 "question"
+#   ypi                              # interactive recursive pi
+#   ypi "What is in this repo?"      # one-shot with -p
+#   ypi --provider anthropic --model claude-sonnet-4-5-20250929 "question"
 #
 # Environment overrides:
 #   RLM_PROVIDER      — LLM provider for sub-calls (default: cerebras)
@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-# Resolve the directory where rpi lives (and where rlm_query + SYSTEM_PROMPT.md are)
+# Resolve the directory where ypi lives (and where rlm_query + SYSTEM_PROMPT.md are)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Put rlm_query on PATH so Pi's bash tool can find it
