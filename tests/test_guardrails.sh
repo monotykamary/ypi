@@ -315,7 +315,8 @@ echo ""
 echo "=== Error Propagation ==="
 
 # G11: non-zero exit from pi propagates up
-if ! _feature_exists "exec pi"; then
+# Check if exec pi is used as actual code (not in comments)
+if ! grep -q "^exec pi\|^[[:space:]]*exec pi" "$RLM_QUERY" 2>/dev/null; then
     # Only testable after removing exec (using subprocess instead)
     cat > "$MOCK_BIN/pi" << 'ERRPI'
 #!/bin/bash

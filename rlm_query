@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # rlm_query — Recursive Language Model sub-call for Pi.
 #
 # This is the Pi/bash equivalent of Python RLM's llm_query().
@@ -20,11 +20,20 @@
 #   RLM_SYSTEM_PROMPT — path to the RLM system prompt file
 #   CONTEXT           — path to the current context file
 #   RLM_STDIN         — set to "1" by the calling pattern to indicate piped input
+#   RLM_TIMEOUT       — max wall‑clock seconds for the whole call chain
+#   RLM_START_TIME    — epoch seconds when the root call started (auto‑set)
+#   RLM_MAX_CALLS     — maximum total rlm_query invocations allowed
+#   RLM_CALL_COUNT    — current count of invocations (auto‑incremented)
+#   RLM_CHILD_MODEL   — model to use for child calls (depth > 0)
+#   RLM_CHILD_PROVIDER— provider to use for child calls (depth > 0)
 
 set -euo pipefail
 
 PROMPT="${1:?Usage: rlm_query \"your prompt here\"}"
 
+# ----------------------------------------------------------------------
+# Depth handling
+# ----------------------------------------------------------------------
 DEPTH="${RLM_DEPTH:-0}"
 MAX_DEPTH="${RLM_MAX_DEPTH:-3}"
 NEXT_DEPTH=$((DEPTH + 1))
@@ -33,40 +42,71 @@ PROVIDER="${RLM_PROVIDER:-cerebras}"
 MODEL="${RLM_MODEL:-gpt-oss-120b}"
 SYSTEM_PROMPT_FILE="${RLM_SYSTEM_PROMPT:-}"
 
-# Trace if enabled
+# ----------------------------------------------------------------------
+# Feature 2 – Timeout start time initialization
+# ----------------------------------------------------------------------
+if [ -z "${RLM_START_TIME:-}" ]; then
+    export RLM_START_TIME=$(date +%s)
+fi
+
+# ----------------------------------------------------------------------
+# Feature 3 – Call counting & max‑calls guard
+# ----------------------------------------------------------------------
+RLM_CALL_COUNT=$(( ${RLM_CALL_COUNT:-0} + 1 ))
+export RLM_CALL_COUNT
+if [ -n "${RLM_MAX_CALLS:-}" ] && [ "$RLM_CALL_COUNT" -ge "$RLM_MAX_CALLS" ]; then
+    echo "Error: max calls exceeded ($RLM_MAX_CALLS)" >&2
+    exit 1
+fi
+
+# ----------------------------------------------------------------------
+# Trace logging (optional)
+# ----------------------------------------------------------------------
 if [ -n "${PI_TRACE_FILE:-}" ]; then
     echo "[$(date +%H:%M:%S.%3N)] depth=$DEPTH→$NEXT_DEPTH PID=$$ PPID=$PPID prompt: ${PROMPT:0:120}" >> "$PI_TRACE_FILE"
 fi
 
-# Create the child's context file
+# ----------------------------------------------------------------------
+# Temporary child context file
+# ----------------------------------------------------------------------
 CHILD_CONTEXT=$(mktemp /tmp/rlm_ctx_d${NEXT_DEPTH}_XXXXXX.txt)
 
-# Determine if we have piped input.
-# In subprocess contexts (like Pi's bash tool), stdin is never a terminal,
-# so we can't use `[ -t 0 ]`. Instead, check /proc/self/fd/0 or use
-# a small timeout read to detect actual data.
+# Cleanup trap – FEATURE 1 (already present)
+trap 'rm -f "$CHILD_CONTEXT"' EXIT
+
+# ----------------------------------------------------------------------
+# Detect piped stdin
+# ----------------------------------------------------------------------
 HAS_STDIN=false
-if [ -p /dev/stdin ] 2>/dev/null; then
-    # /dev/stdin is a pipe — someone piped data to us
+if [ -p /dev/stdin ]; then
     HAS_STDIN=true
 elif [ -n "${RLM_STDIN:-}" ]; then
-    # Explicitly told we have stdin (fallback for platforms without /proc)
     HAS_STDIN=true
 fi
 
 if [ "$HAS_STDIN" = true ]; then
     cat > "$CHILD_CONTEXT"
 else
-    # No pipe — inherit parent's context
     if [ -n "${CONTEXT:-}" ] && [ -f "${CONTEXT:-}" ]; then
         cp "$CONTEXT" "$CHILD_CONTEXT"
     fi
 fi
 
-# At max depth: plain LM call — no bash tools, just read and answer
+# ----------------------------------------------------------------------
+# Feature 4 – Model routing for child calls (depth > 0)
+# ----------------------------------------------------------------------
+if [ "$DEPTH" -gt 0 ] && [ -n "${RLM_CHILD_MODEL:-}" ]; then
+    MODEL="${RLM_CHILD_MODEL}"
+    if [ -n "${RLM_CHILD_PROVIDER:-}" ]; then
+        PROVIDER="${RLM_CHILD_PROVIDER}"
+    fi
+fi
+
+# ----------------------------------------------------------------------
+# Max‑depth handling (plain LM, no bash tools)
+# ----------------------------------------------------------------------
 if [ "$NEXT_DEPTH" -ge "$MAX_DEPTH" ]; then
     CHILD_CONTENT=$(cat "$CHILD_CONTEXT")
-    rm -f "$CHILD_CONTEXT"
     if [ -n "$CHILD_CONTENT" ]; then
         FULL_PROMPT="$PROMPT
 
@@ -75,22 +115,52 @@ $CHILD_CONTENT"
     else
         FULL_PROMPT="$PROMPT"
     fi
-    exec pi -p --provider "$PROVIDER" --model "$MODEL" --no-session --no-extensions --no-tools "$FULL_PROMPT"
+
+    # Timeout wrapper (Feature 2)
+    TIMEOUT_CMD=""
+    if [ -n "${RLM_TIMEOUT:-}" ]; then
+        ELAPSED=$(( $(date +%s) - RLM_START_TIME ))
+        REMAINING=$(( RLM_TIMEOUT - ELAPSED ))
+        if [ "$REMAINING" -le 0 ]; then
+            echo "Error: timeout exceeded ($RLM_TIMEOUT seconds)" >&2
+            exit 124
+        fi
+        TIMEOUT_CMD="timeout $REMAINING"
+    fi
+
+    $TIMEOUT_CMD pi -p --provider "$PROVIDER" --model "$MODEL" --no-session --no-extensions --no-tools "$FULL_PROMPT"
+    exit $?
 fi
 
-# Below max depth: spawn a full recursive child Pi with bash tools
+# ----------------------------------------------------------------------
+# Below max depth – spawn recursive child Pi with bash tools
+# ----------------------------------------------------------------------
 export CONTEXT="$CHILD_CONTEXT"
 export RLM_DEPTH="$NEXT_DEPTH"
 export RLM_MAX_DEPTH="$MAX_DEPTH"
 export RLM_PROVIDER="$PROVIDER"
 export RLM_MODEL="$MODEL"
 export RLM_SYSTEM_PROMPT="${SYSTEM_PROMPT_FILE:-}"
+export RLM_START_TIME="${RLM_START_TIME}"
+export RLM_TIMEOUT="${RLM_TIMEOUT:-}"
 
 CMD_ARGS=(-p --provider "$PROVIDER" --model "$MODEL" --no-session --no-extensions)
 
 if [ -n "$SYSTEM_PROMPT_FILE" ] && [ -f "$SYSTEM_PROMPT_FILE" ]; then
-    # Pass file path — Pi's resolvePromptInput() reads it via existsSync()
     CMD_ARGS+=(--system-prompt "$SYSTEM_PROMPT_FILE")
 fi
 
-exec pi "${CMD_ARGS[@]}" "$PROMPT"
+# Timeout wrapper for recursive pi call (Feature 2)
+TIMEOUT_CMD=""
+if [ -n "${RLM_TIMEOUT:-}" ]; then
+    ELAPSED=$(( $(date +%s) - RLM_START_TIME ))
+    REMAINING=$(( RLM_TIMEOUT - ELAPSED ))
+    if [ "$REMAINING" -le 0 ]; then
+        echo "Error: timeout exceeded ($RLM_TIMEOUT seconds)" >&2
+        exit 124
+    fi
+    TIMEOUT_CMD="timeout $REMAINING"
+fi
+
+$TIMEOUT_CMD pi "${CMD_ARGS[@]}" "$PROMPT"
+exit $?
