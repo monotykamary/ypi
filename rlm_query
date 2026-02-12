@@ -253,6 +253,13 @@ else
     CMD_ARGS+=(--no-session)
 fi
 
+# Hashline edit extension — pass through to children if available
+# Skip if already loaded globally (e.g. ~/.pi/agent/extensions/hashline.ts)
+GLOBAL_HASHLINE="${HOME}/.pi/agent/extensions/hashline.ts"
+if [ "${RLM_HASHLINE:-1}" != "0" ] && [ -f "$SCRIPT_DIR/extensions/hashline.ts" ] && [ ! -f "$GLOBAL_HASHLINE" ]; then
+    CMD_ARGS+=(-e "$SCRIPT_DIR/extensions/hashline.ts")
+fi
+
 # Build combined system prompt with rlm_query source embedded
 COMBINED_PROMPT=""
 if [ -n "$SYSTEM_PROMPT_FILE" ] && [ -f "$SYSTEM_PROMPT_FILE" ]; then

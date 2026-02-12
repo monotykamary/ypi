@@ -3,6 +3,11 @@
 All notable changes to ypi are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.1] - 2026-02-13
+
+### Fixed
+- Skip bundled `hashline.ts` extension when the global install (`~/.pi/agent/extensions/hashline.ts`) exists, fixing "Tool read/edit conflicts" error
+
 ## [0.2.0] - 2026-02-12
 
 ### Added
