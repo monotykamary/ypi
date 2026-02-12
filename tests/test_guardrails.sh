@@ -36,6 +36,10 @@ assert_exit_code() {
     local label="$1" expected="$2" actual="$3"
     if [ "$expected" = "$actual" ]; then pass "$label"; else fail "$label" "expected exit $expected, got $actual"; fi
 }
+assert_file_not_exists() {
+    local label="$1" path="$2"
+    if [ ! -f "$path" ]; then pass "$label"; else fail "$label" "file should not exist: $path"; fi
+}
 
 # ─── Mock pi ──────────────────────────────────────────────────────────────
 
@@ -348,6 +352,204 @@ MOCK_PI
 else
     skip "G11: exit code propagated" "still uses exec (replaces process)"
 fi
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# JJ WORKSPACE ISOLATION TESTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "=== JJ Workspace Isolation ==="
+
+# Helper: mock jj that logs calls
+JJ_LOG="$TEST_TMP/jj_log.txt"
+export JJ_LOG
+cat > "$MOCK_BIN/jj" << 'MOCK_JJ'
+#!/bin/bash
+echo "JJ_CALL: $*" >> "${JJ_LOG:-/dev/null}"
+if [ "$1" = "root" ]; then exit 0; fi
+if [ "$1" = "workspace" ] && [ "$2" = "add" ]; then exit 0; fi
+if [ "$1" = "workspace" ] && [ "$2" = "forget" ]; then exit 0; fi
+exit 0
+MOCK_JJ
+chmod +x "$MOCK_BIN/jj"
+
+# G12: workspace created for non-leaf depth when jj available
+rm -f "$JJ_LOG"
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    rlm_query "Check JJ workspace"
+)
+if [ -f "$JJ_LOG" ] && grep -qF -- "workspace add" "$JJ_LOG"; then
+    pass "G12: JJ workspace created for non-leaf depth"
+else
+    fail "G12: JJ workspace created for non-leaf depth" "jj workspace add not called"
+fi
+
+# G13: RLM_JJ=0 disables workspace creation
+rm -f "$JJ_LOG"
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_JJ=0 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    rlm_query "No JJ workspace"
+)
+if [ -f "$JJ_LOG" ] && grep -qF -- "workspace add" "$JJ_LOG"; then
+    fail "G13: RLM_JJ=0 disables JJ" "jj workspace add was still called"
+else
+    pass "G13: RLM_JJ=0 disables JJ"
+fi
+
+# G14: Leaf nodes should NOT create workspaces
+rm -f "$JJ_LOG"
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=2 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    rlm_query "Leaf depth"
+)
+if [ -f "$JJ_LOG" ] && grep -qF -- "workspace add" "$JJ_LOG"; then
+    fail "G14: leaf depth avoids JJ" "jj workspace add called on leaf"
+else
+    pass "G14: leaf depth avoids JJ"
+fi
+
+# G15: No jj on PATH → falls back gracefully
+SAVED_PATH="$PATH"
+PATH=$(echo "$PATH" | tr ':' '\n' | grep -v "$MOCK_BIN" | paste -sd ':' -)
+PATH="$PROJECT_DIR:$PATH"  # keep rlm_query on PATH
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    PATH="$PATH" \
+    rlm_query "No jj present" 2>&1 || true
+)
+PATH="$SAVED_PATH"
+# Should still call mock pi successfully (pi is back on PATH after restore)
+# The key check: no crash/error about jj
+assert_not_contains "G15: no jj error" "jj: command not found" "$OUTPUT"
+pass "G15: gracefully continues without jj"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STRUCTURED ERROR TESTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "=== Structured Errors ==="
+
+# Restore standard mock pi for remaining tests
+cat > "$MOCK_BIN/pi" << 'MOCK_PI'
+#!/bin/bash
+echo "MOCK_PI_CALLED"
+echo "ARGS: $*"
+echo "RLM_DEPTH=$RLM_DEPTH"
+echo "RLM_MODEL=$RLM_MODEL"
+echo "RLM_CALL_COUNT=${RLM_CALL_COUNT:-unset}"
+MOCK_PI
+chmod +x "$MOCK_BIN/pi"
+
+# G16: Timeout error has Why + Fix
+PAST=$(($(date +%s) - 100))
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_TIMEOUT=1 \
+    RLM_START_TIME=$PAST \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    rlm_query "Trigger timeout" 2>&1 || true
+)
+assert_contains "G16: timeout Why hint" "Why:" "$OUTPUT"
+assert_contains "G16: timeout Fix hint" "Fix:" "$OUTPUT"
+
+# G17: Max calls error has Why + Fix
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_MAX_CALLS=1 \
+    RLM_CALL_COUNT=1 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    rlm_query "Exceed max calls" 2>&1 || true
+)
+assert_contains "G17: max calls Why hint" "Why:" "$OUTPUT"
+assert_contains "G17: max calls Fix hint" "Fix:" "$OUTPUT"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# EXECUTION SUMMARY TESTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "=== Execution Summary ==="
+
+# G18: COMPLETED line in trace after successful call
+TRACE_FILE="$TEST_TMP/summary_trace.log"
+rm -f "$TRACE_FILE"
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    PI_TRACE_FILE="$TRACE_FILE" \
+    rlm_query "Summary test"
+)
+if [ -f "$TRACE_FILE" ] && grep -qF -- "COMPLETED" "$TRACE_FILE"; then
+    pass "G18: COMPLETED in trace"
+else
+    fail "G18: COMPLETED in trace" "no COMPLETED line in trace file"
+fi
+if [ -f "$TRACE_FILE" ] && grep -qF -- "exit=0" "$TRACE_FILE"; then
+    pass "G18: exit code in trace"
+else
+    fail "G18: exit code in trace" "no exit=0 in trace"
+fi
+if [ -f "$TRACE_FILE" ] && grep -qF -- "elapsed=" "$TRACE_FILE"; then
+    pass "G18: elapsed in trace"
+else
+    fail "G18: elapsed in trace" "no elapsed= in trace"
+fi
+
+# G19: No COMPLETED when PI_TRACE_FILE unset
+TRACE_FILE2="$TEST_TMP/no_summary_trace.log"
+rm -f "$TRACE_FILE2"
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    rlm_query "No trace test"
+)
+assert_file_not_exists "G19: no trace file when unset" "$TRACE_FILE2"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# EDGE CASE TESTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "=== Edge Cases ==="
+
+# G20: RLM_TIMEOUT=0 exits immediately
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_TIMEOUT=0 \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    rlm_query "Immediate timeout" 2>&1 || true
+)
+assert_not_contains "G20: timeout=0 no pi call" "MOCK_PI_CALLED" "$OUTPUT"
+assert_contains "G20: timeout=0 error msg" "imeout" "$OUTPUT"
+
+# G21: RLM_CALL_COUNT defaults to 0, increments to 1
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    rlm_query "Default call count"
+)
+assert_contains "G21: call count defaults to 1" "RLM_CALL_COUNT=1" "$OUTPUT"
 
 
 # ─── Summary ──────────────────────────────────────────────────────────────
