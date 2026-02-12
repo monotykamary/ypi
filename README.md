@@ -101,7 +101,7 @@ Depth 0 (root)    → full Pi with bash + rlm_query
 ```
 ypi/
 ├── ypi                    # Launcher: sets up env, starts Pi as recursive agent
-├── rlm_query              # The recursive sub-call function (Pi's llm_query())
+├── rlm_query              # The recursive sub-call function (Pi's analog of rlm llm_query())
 ├── SYSTEM_PROMPT.md       # Teaches the LLM to be recursive + edit code
 ├── AGENTS.md              # Meta-instructions for the agent (read by ypi itself)
 ├── Makefile               # test targets
@@ -140,14 +140,6 @@ make test         # Both
 
 **Before any change to `rlm_query`:** run `make test-fast`. After: run it again. `rlm_query` is a live dependency of the agent's own execution — breaking it breaks the agent.
 
-### Secrets & Encryption
-
-Files in `private/` are encrypted with [sops](https://github.com/getsops/sops) + [age](https://github.com/FiloSottile/age). The pre-commit hook blocks unencrypted files from being committed.
-
-```bash
-sops private/notes.md            # Edit (decrypts → editor → re-encrypts)
-sops encrypt -i private/new.json # Encrypt a new file
-```
 
 ### History
 

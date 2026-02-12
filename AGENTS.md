@@ -168,3 +168,12 @@ testing between changes. One variable at a time.
 **Symptom**: Model calls rlm_query on 11-line contexts, creating infinite chains.
 **Fix**: "Check context size first, read directly if small."
 **Test**: E1 (small context, should answer directly without sub-calls).
+
+### Secrets & Encryption
+
+Files in `private/` are encrypted with [sops](https://github.com/getsops/sops) + [age](https://github.com/FiloSottile/age). The pre-commit hook blocks unencrypted files from being committed.
+
+```bash
+sops private/notes.md            # Edit (decrypts → editor → re-encrypts)
+sops encrypt -i private/new.json # Encrypt a new file
+```

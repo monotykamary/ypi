@@ -11,9 +11,15 @@
 #   ypi --provider anthropic --model claude-sonnet-4-5-20250929 "question"
 #
 # Environment overrides:
-#   RLM_PROVIDER      — LLM provider for sub-calls (default: cerebras)
-#   RLM_MODEL         — LLM model for sub-calls (default: gpt-oss-120b)
-#   RLM_MAX_DEPTH     — max recursion depth (default: 3)
+#   RLM_PROVIDER       — LLM provider for root call (default: cerebras)
+#   RLM_MODEL          — LLM model for root call (default: gpt-oss-120b)
+#   RLM_MAX_DEPTH      — max recursion depth (default: 3)
+#   RLM_TIMEOUT        — wall-clock seconds for entire recursive tree (default: none)
+#   RLM_MAX_CALLS      — max total rlm_query invocations (default: none)
+#   RLM_CHILD_MODEL    — cheaper model for sub-calls at depth > 0 (default: same as root)
+#   RLM_CHILD_PROVIDER — provider for sub-calls at depth > 0 (default: same as root)
+#   RLM_JJ             — set to "0" to disable jj workspace isolation (default: 1)
+#   PI_TRACE_FILE      — path to trace log for all calls with timing (default: none)
 
 set -euo pipefail
 
@@ -23,20 +29,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Put rlm_query on PATH so Pi's bash tool can find it
 export PATH="$SCRIPT_DIR:$PATH"
 
-# Initialize RLM environment
+# Initialize RLM environment — pass through all guardrails
 export RLM_DEPTH="${RLM_DEPTH:-0}"
 export RLM_MAX_DEPTH="${RLM_MAX_DEPTH:-3}"
 export RLM_PROVIDER="${RLM_PROVIDER:-cerebras}"
 export RLM_MODEL="${RLM_MODEL:-gpt-oss-120b}"
 export RLM_SYSTEM_PROMPT="$SCRIPT_DIR/SYSTEM_PROMPT.md"
 
+# Guardrails — pass through if set, don't override
+[ -n "${RLM_TIMEOUT:-}" ]        && export RLM_TIMEOUT
+[ -n "${RLM_MAX_CALLS:-}" ]      && export RLM_MAX_CALLS
+[ -n "${RLM_CHILD_MODEL:-}" ]    && export RLM_CHILD_MODEL
+[ -n "${RLM_CHILD_PROVIDER:-}" ] && export RLM_CHILD_PROVIDER
+[ -n "${PI_TRACE_FILE:-}" ]      && export PI_TRACE_FILE
+export RLM_JJ="${RLM_JJ:-1}"
+
 # Session tree tracing — generate a trace ID that links all recursive sessions
-# The trace ID is an 8-char hex string shared by every node in the recursive tree.
-# Child sessions are named <trace_id>_d<depth>_c<call>.jsonl
 export RLM_TRACE_ID="${RLM_TRACE_ID:-$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
 
 # Compute Pi's session directory for this CWD so children can write there
-# Mirrors Pi's getDefaultSessionDir(): --<cwd-with-slashes-replaced>--
 CWD="$(pwd)"
 SAFE_PATH="--$(echo "$CWD" | sed 's|^/||; s|[/:\\]|-|g')--"
 export RLM_SESSION_DIR="${HOME}/.pi/agent/sessions/${SAFE_PATH}"
