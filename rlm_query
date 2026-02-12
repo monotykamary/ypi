@@ -32,6 +32,7 @@
 #   RLM_CHILD_MODEL   — model to use for child calls (depth > 0)
 #   RLM_CHILD_PROVIDER— provider to use for child calls (depth > 0)
 #   RLM_JJ            — set to "0" to disable jj workspace isolation
+#   RLM_EXTENSIONS    — set to "1" to enable Pi extensions in children (default: 0)
 #   RLM_TRACE_ID      — shared ID linking all sessions in a recursive tree
 #   RLM_SESSION_DIR   — Pi session directory for this project
 #   RLM_SESSION_FILE  — parent's session file (used with --fork)
@@ -224,7 +225,10 @@ if [ -n "$CHILD_SESSION_FILE" ]; then
     export RLM_SESSION_FILE="$CHILD_SESSION_FILE"
 fi
 
-CMD_ARGS=(-p --provider "$PROVIDER" --model "$MODEL" --no-extensions)
+CMD_ARGS=(-p --provider "$PROVIDER" --model "$MODEL")
+if [ "${RLM_EXTENSIONS:-0}" != "1" ]; then
+    CMD_ARGS+=(--no-extensions)
+fi
 
 # Session: use dedicated file if we have a session dir, otherwise ephemeral
 if [ -n "$CHILD_SESSION_FILE" ]; then

@@ -113,9 +113,6 @@ ypi/
 │   ├── test_unit.sh       # Mock pi, test bash logic (no LLM, fast)
 │   ├── test_guardrails.sh # Test guardrails (no LLM, fast)
 │   └── test_e2e.sh        # Real LLM calls (slow, costs ~$0.05)
-├── .githooks/pre-commit   # Gitleaks + sops encryption check
-├── .sops.yaml             # Age encryption rules for private/
-├── private/               # Sops-encrypted notes (safe to commit)
 ├── pi-mono/               # Git submodule: upstream Pi coding agent
 └── README.md
 ```

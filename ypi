@@ -19,6 +19,7 @@
 #   RLM_CHILD_MODEL    — cheaper model for sub-calls at depth > 0 (default: same as root)
 #   RLM_CHILD_PROVIDER — provider for sub-calls at depth > 0 (default: same as root)
 #   RLM_JJ             — set to "0" to disable jj workspace isolation (default: 1)
+#   RLM_EXTENSIONS     — set to "1" to enable Pi extensions in children (default: 0)
 #   PI_TRACE_FILE      — path to trace log for all calls with timing (default: none)
 
 set -euo pipefail
@@ -43,6 +44,7 @@ export RLM_SYSTEM_PROMPT="$SCRIPT_DIR/SYSTEM_PROMPT.md"
 [ -n "${RLM_CHILD_PROVIDER:-}" ] && export RLM_CHILD_PROVIDER
 [ -n "${PI_TRACE_FILE:-}" ]      && export PI_TRACE_FILE
 export RLM_JJ="${RLM_JJ:-1}"
+export RLM_EXTENSIONS="${RLM_EXTENSIONS:-0}"
 
 # Session tree tracing — generate a trace ID that links all recursive sessions
 export RLM_TRACE_ID="${RLM_TRACE_ID:-$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')}"

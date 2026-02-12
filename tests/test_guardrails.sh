@@ -761,6 +761,53 @@ assert_contains "G33: first call → c1" "_c1.jsonl" "$OUTPUT1"
 assert_contains "G33: second call → c2" "_c2.jsonl" "$OUTPUT2"
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# EXTENSIONS TESTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "=== Extensions ==="
+
+# Restore standard mock
+cat > "$MOCK_BIN/pi" << 'MOCK_PI'
+#!/bin/bash
+echo "MOCK_PI_CALLED"
+echo "ARGS: $*"
+echo "RLM_DEPTH=$RLM_DEPTH"
+echo "RLM_MODEL=$RLM_MODEL"
+MOCK_PI
+chmod +x "$MOCK_BIN/pi"
+
+# G34: children have --no-extensions by default
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    rlm_query "Extensions default test"
+)
+assert_contains "G34: --no-extensions by default" "--no-extensions" "$OUTPUT"
+
+# G35: RLM_EXTENSIONS=1 removes --no-extensions
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    RLM_EXTENSIONS=1 \
+    rlm_query "Extensions enabled test"
+)
+assert_not_contains "G35: RLM_EXTENSIONS=1 no --no-extensions" "--no-extensions" "$OUTPUT"
+
+# G36: leaf nodes always have --no-extensions regardless of RLM_EXTENSIONS
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=2 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    RLM_EXTENSIONS=1 \
+    rlm_query "Leaf extensions test"
+)
+assert_contains "G36: leaf always --no-extensions" "--no-extensions" "$OUTPUT"
+
+
 # ─── Summary ──────────────────────────────────────────────────────────────
 
 echo ""
