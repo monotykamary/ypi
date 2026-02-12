@@ -40,15 +40,19 @@ Pi already has a bash REPL. We add one function — `rlm_query` — and a system
 ### Install
 
 ```bash
+# npm (global)
+npm install -g ypi
+
+# or run without installing
+npx ypi "What does this repo do?"
+bunx ypi "What does this repo do?"
+
+# or curl
 curl -fsSL https://raw.githubusercontent.com/rawwerks/ypi/master/install.sh | bash
-```
 
-Or manually:
-
-```bash
-git clone https://github.com/rawwerks/ypi.git
-cd ypi
-git submodule update --init --depth 1  # pulls pi-mono
+# or manual
+git clone https://github.com/rawwerks/ypi.git && cd ypi
+git submodule update --init --depth 1
 export PATH="$PWD:$PATH"
 ```
 
