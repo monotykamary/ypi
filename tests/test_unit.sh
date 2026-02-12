@@ -165,28 +165,34 @@ assert_contains "T4: parent context inherited" "dogs" "$OUTPUT"
 echo ""
 echo "=== Depth Handling ==="
 
-# T5: at max depth, uses --no-tools (leaf node)
+# T5: at max depth, rlm_query is removed from child's PATH
 OUTPUT=$(
     CONTEXT="$TEST_TMP/ctx.txt" \
     RLM_DEPTH=2 \
     RLM_MAX_DEPTH=3 \
     RLM_PROVIDER=test-provider \
     RLM_MODEL=test-model \
-    rlm_query "Leaf question?"
+    rlm_query "Max depth question?"
 )
-assert_contains "T5: leaf node uses --no-tools" "--no-tools" "$OUTPUT"
+# Child still gets tools — verify pi is called
+assert_contains "T5: max depth still calls pi" "MOCK_PI_CALLED" "$OUTPUT"
+# Should NOT have --no-tools
+assert_not_contains "T5: max depth has tools" "--no-tools" "$OUTPUT"
 
-# T6: below max depth, does NOT use --no-tools
+# T6: beyond max depth, rlm_query refuses (depth guard)
+set +e
 OUTPUT=$(
     CONTEXT="$TEST_TMP/ctx.txt" \
-    RLM_DEPTH=0 \
+    RLM_DEPTH=3 \
     RLM_MAX_DEPTH=3 \
     RLM_PROVIDER=test-provider \
     RLM_MODEL=test-model \
-    RLM_SYSTEM_PROMPT="$PROJECT_DIR/SYSTEM_PROMPT.md" \
-    rlm_query "Non-leaf question?"
+    rlm_query "Beyond max depth?" 2>&1
 )
-assert_not_contains "T6: non-leaf no --no-tools" "--no-tools" "$OUTPUT"
+EXIT_CODE=$?
+set -e
+assert_contains "T6: beyond max depth error" "Max depth exceeded" "$OUTPUT"
+assert_not_contains "T6: beyond max depth no pi call" "MOCK_PI_CALLED" "$OUTPUT"
 
 # T7: depth increments correctly across levels
 OUTPUT=$(

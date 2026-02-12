@@ -32,7 +32,8 @@
 #   RLM_CHILD_MODEL   — model to use for child calls (depth > 0)
 #   RLM_CHILD_PROVIDER— provider to use for child calls (depth > 0)
 #   RLM_JJ            — set to "0" to disable jj workspace isolation
-#   RLM_EXTENSIONS    — set to "1" to enable Pi extensions in children (default: 0)
+#   RLM_EXTENSIONS    — set to "0" to disable Pi extensions (default: 1)
+#   RLM_CHILD_EXTENSIONS — override extensions for depth > 0 (default: same as parent)
 #   RLM_TRACE_ID      — shared ID linking all sessions in a recursive tree
 #   RLM_SESSION_DIR   — Pi session directory for this project
 #   RLM_SESSION_FILE  — parent's session file (used with --fork)
@@ -56,25 +57,31 @@ done
 PROMPT="${1:?Usage: rlm_query [--fork] \"your prompt here\"}"
 
 # ----------------------------------------------------------------------
-# Depth handling
+# Depth guard — refuse to go beyond max depth
+# This is the only recursion limiter. Children get full tools/extensions.
 # ----------------------------------------------------------------------
 DEPTH="${RLM_DEPTH:-0}"
 MAX_DEPTH="${RLM_MAX_DEPTH:-3}"
 NEXT_DEPTH=$((DEPTH + 1))
+
+if [ "$NEXT_DEPTH" -gt "$MAX_DEPTH" ]; then
+    rlm_error "Max depth exceeded" "At depth $DEPTH of $MAX_DEPTH" "Increase RLM_MAX_DEPTH or simplify the task"
+    exit 1
+fi
 
 PROVIDER="${RLM_PROVIDER:-cerebras}"
 MODEL="${RLM_MODEL:-gpt-oss-120b}"
 SYSTEM_PROMPT_FILE="${RLM_SYSTEM_PROMPT:-}"
 
 # ----------------------------------------------------------------------
-# Feature 2 – Timeout start time initialization
+# Timeout start time initialization
 # ----------------------------------------------------------------------
 if [ -z "${RLM_START_TIME:-}" ]; then
     export RLM_START_TIME=$(date +%s)
 fi
 
 # ----------------------------------------------------------------------
-# Feature 3 – Call counting & max‑calls guard
+# Call counting & max‑calls guard
 # ----------------------------------------------------------------------
 RLM_CALL_COUNT=$(( ${RLM_CALL_COUNT:-0} + 1 ))
 export RLM_CALL_COUNT
@@ -91,7 +98,6 @@ if [ -z "${RLM_TRACE_ID:-}" ]; then
     export RLM_TRACE_ID=$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')
 fi
 
-# Compute child session file path
 CHILD_SESSION_FILE=""
 if [ -n "${RLM_SESSION_DIR:-}" ]; then
     mkdir -p "$RLM_SESSION_DIR"
@@ -117,12 +123,10 @@ CHILD_CONTEXT=$(mktemp /tmp/rlm_ctx_d${NEXT_DEPTH}_XXXXXX.txt)
 
 # ----------------------------------------------------------------------
 # jj workspace isolation — give recursive children their own working copy
-# Skipped for leaf nodes (no tools, can't edit files) and when disabled.
 # ----------------------------------------------------------------------
 JJ_WORKSPACE=""
 JJ_WS_NAME=""
-if [ "$NEXT_DEPTH" -lt "$MAX_DEPTH" ] \
-   && [ "${RLM_JJ:-1}" != "0" ] \
+if [ "${RLM_JJ:-1}" != "0" ] \
    && command -v jj &>/dev/null \
    && jj root &>/dev/null 2>&1; then
     JJ_WS_NAME="rlm-d${NEXT_DEPTH}-$$"
@@ -161,7 +165,7 @@ else
 fi
 
 # ----------------------------------------------------------------------
-# Feature 4 – Model routing for child calls (depth > 0)
+# Model routing for child calls (depth > 0)
 # ----------------------------------------------------------------------
 if [ "$DEPTH" -gt 0 ] && [ -n "${RLM_CHILD_MODEL:-}" ]; then
     MODEL="${RLM_CHILD_MODEL}"
@@ -171,43 +175,7 @@ if [ "$DEPTH" -gt 0 ] && [ -n "${RLM_CHILD_MODEL:-}" ]; then
 fi
 
 # ----------------------------------------------------------------------
-# Max‑depth handling (plain LM, no bash tools) — no session (ephemeral)
-# ----------------------------------------------------------------------
-if [ "$NEXT_DEPTH" -ge "$MAX_DEPTH" ]; then
-    CHILD_CONTENT=$(cat "$CHILD_CONTEXT")
-    if [ -n "$CHILD_CONTENT" ]; then
-        FULL_PROMPT="$PROMPT
-
-Context:
-$CHILD_CONTENT"
-    else
-        FULL_PROMPT="$PROMPT"
-    fi
-
-    # Timeout wrapper (Feature 2)
-    TIMEOUT_CMD=""
-    if [ -n "${RLM_TIMEOUT:-}" ]; then
-        ELAPSED=$(( $(date +%s) - RLM_START_TIME ))
-        REMAINING=$(( RLM_TIMEOUT - ELAPSED ))
-        if [ "$REMAINING" -le 0 ]; then
-            rlm_error "Timeout exceeded" "Ran for ${ELAPSED}s of ${RLM_TIMEOUT}s" "Increase RLM_TIMEOUT or simplify the task"
-            exit 124
-        fi
-        TIMEOUT_CMD="timeout $REMAINING"
-    fi
-
-    $TIMEOUT_CMD pi -p --provider "$PROVIDER" --model "$MODEL" --no-session --no-extensions --no-tools "$FULL_PROMPT"
-    RC=$?
-    # Execution summary (Feature 7)
-    if [ -n "${PI_TRACE_FILE:-}" ]; then
-        ELAPSED=$(( $(date +%s) - RLM_START_TIME ))
-        echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] depth=$DEPTH COMPLETED exit=$RC elapsed=${ELAPSED}s" >> "$PI_TRACE_FILE"
-    fi
-    exit $RC
-fi
-
-# ----------------------------------------------------------------------
-# Below max depth – spawn recursive child Pi with bash tools + session
+# Spawn child Pi with tools, extensions, and session
 # ----------------------------------------------------------------------
 export CONTEXT="$CHILD_CONTEXT"
 export RLM_DEPTH="$NEXT_DEPTH"
@@ -220,13 +188,26 @@ export RLM_TIMEOUT="${RLM_TIMEOUT:-}"
 export RLM_TRACE_ID="${RLM_TRACE_ID}"
 export RLM_SESSION_DIR="${RLM_SESSION_DIR:-}"
 
-# Pass our session file so children can fork from it
+# At max depth: remove rlm_query from PATH so the child can't recurse.
+# The child still gets full tools (bash, read, write, edit) — it just
+# can't spawn sub-agents. The depth guard above is a safety net.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ "$NEXT_DEPTH" -ge "$MAX_DEPTH" ]; then
+    export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v "^${SCRIPT_DIR}$" | paste -sd ':' -)
+fi
+
 if [ -n "$CHILD_SESSION_FILE" ]; then
     export RLM_SESSION_FILE="$CHILD_SESSION_FILE"
 fi
 
 CMD_ARGS=(-p --provider "$PROVIDER" --model "$MODEL")
-if [ "${RLM_EXTENSIONS:-0}" != "1" ]; then
+
+# Extensions: on by default, configurable per-instance like model routing
+CHILD_EXT="${RLM_EXTENSIONS:-1}"
+if [ "$DEPTH" -gt 0 ] && [ -n "${RLM_CHILD_EXTENSIONS:-}" ]; then
+    CHILD_EXT="${RLM_CHILD_EXTENSIONS}"
+fi
+if [ "$CHILD_EXT" = "0" ]; then
     CMD_ARGS+=(--no-extensions)
 fi
 
@@ -241,7 +222,7 @@ if [ -n "$SYSTEM_PROMPT_FILE" ] && [ -f "$SYSTEM_PROMPT_FILE" ]; then
     CMD_ARGS+=(--system-prompt "$SYSTEM_PROMPT_FILE")
 fi
 
-# Timeout wrapper for recursive pi call (Feature 2)
+# Timeout wrapper
 TIMEOUT_CMD=""
 if [ -n "${RLM_TIMEOUT:-}" ]; then
     ELAPSED=$(( $(date +%s) - RLM_START_TIME ))
@@ -260,7 +241,8 @@ fi
 
 $TIMEOUT_CMD pi "${CMD_ARGS[@]}" "$PROMPT"
 RC=$?
-# Execution summary (Feature 7)
+
+# Execution summary
 if [ -n "${PI_TRACE_FILE:-}" ]; then
     ELAPSED=$(( $(date +%s) - RLM_START_TIME ))
     echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] depth=$DEPTH COMPLETED exit=$RC elapsed=${ELAPSED}s" >> "$PI_TRACE_FILE"

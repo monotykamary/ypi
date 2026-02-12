@@ -403,18 +403,18 @@ else
     pass "G13: RLM_JJ=0 disables JJ"
 fi
 
-# G14: Leaf nodes should NOT create workspaces
+# G14: Max depth nodes still get workspaces (they have tools now)
 rm -f "$JJ_LOG"
 OUTPUT=$(
     CONTEXT="$TEST_TMP/ctx.txt" \
     RLM_DEPTH=2 RLM_MAX_DEPTH=3 \
     RLM_PROVIDER=test RLM_MODEL=test \
-    rlm_query "Leaf depth"
+    rlm_query "Max depth"
 )
 if [ -f "$JJ_LOG" ] && grep -qF -- "workspace add" "$JJ_LOG"; then
-    fail "G14: leaf depth avoids JJ" "jj workspace add called on leaf"
+    pass "G14: max depth gets JJ workspace"
 else
-    pass "G14: leaf depth avoids JJ"
+    fail "G14: max depth gets JJ workspace" "jj workspace add not called"
 fi
 
 # G15: No jj on PATH → falls back gracefully
@@ -637,16 +637,17 @@ OUTPUT=$(
 assert_contains "G26: RLM_SESSION_FILE set" "abc12345_d1_c1.jsonl" "$OUTPUT"
 assert_not_contains "G26: RLM_SESSION_FILE not unset" "RLM_SESSION_FILE=unset" "$OUTPUT"
 
-# G27: leaf nodes still use --no-session (no bash tools, ephemeral)
+# G27: max depth nodes still get sessions (they have full tools)
 OUTPUT=$(
     CONTEXT="$TEST_TMP/ctx.txt" \
     RLM_DEPTH=2 RLM_MAX_DEPTH=3 \
     RLM_PROVIDER=test RLM_MODEL=test \
     RLM_TRACE_ID="abc12345" \
     RLM_SESSION_DIR="$SESSION_TMP" \
-    rlm_query "Leaf session test"
+    rlm_query "Max depth session test"
 )
-assert_contains "G27: leaf uses --no-session" "--no-session" "$OUTPUT"
+assert_contains "G27: max depth gets --session" "--session" "$OUTPUT"
+assert_not_contains "G27: max depth no --no-session" "--no-session" "$OUTPUT"
 
 # G28: without RLM_SESSION_DIR, falls back to --no-session
 OUTPUT=$(
@@ -778,34 +779,54 @@ echo "RLM_MODEL=$RLM_MODEL"
 MOCK_PI
 chmod +x "$MOCK_BIN/pi"
 
-# G34: children have --no-extensions by default
+# G34: children have extensions by default
 OUTPUT=$(
     CONTEXT="$TEST_TMP/ctx.txt" \
     RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
     RLM_PROVIDER=test RLM_MODEL=test \
     rlm_query "Extensions default test"
 )
-assert_contains "G34: --no-extensions by default" "--no-extensions" "$OUTPUT"
+assert_not_contains "G34: extensions on by default" "--no-extensions" "$OUTPUT"
 
-# G35: RLM_EXTENSIONS=1 removes --no-extensions
+# G35: RLM_EXTENSIONS=0 disables extensions
 OUTPUT=$(
     CONTEXT="$TEST_TMP/ctx.txt" \
     RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
     RLM_PROVIDER=test RLM_MODEL=test \
-    RLM_EXTENSIONS=1 \
-    rlm_query "Extensions enabled test"
+    RLM_EXTENSIONS=0 \
+    rlm_query "Extensions disabled test"
 )
-assert_not_contains "G35: RLM_EXTENSIONS=1 no --no-extensions" "--no-extensions" "$OUTPUT"
+assert_contains "G35: RLM_EXTENSIONS=0 disables" "--no-extensions" "$OUTPUT"
 
-# G36: leaf nodes always have --no-extensions regardless of RLM_EXTENSIONS
+# G36: max depth nodes still get extensions by default
 OUTPUT=$(
     CONTEXT="$TEST_TMP/ctx.txt" \
     RLM_DEPTH=2 RLM_MAX_DEPTH=3 \
     RLM_PROVIDER=test RLM_MODEL=test \
-    RLM_EXTENSIONS=1 \
-    rlm_query "Leaf extensions test"
+    rlm_query "Max depth extensions test"
 )
-assert_contains "G36: leaf always --no-extensions" "--no-extensions" "$OUTPUT"
+assert_not_contains "G36: max depth has extensions" "--no-extensions" "$OUTPUT"
+
+# G37: RLM_CHILD_EXTENSIONS=0 disables extensions for children only
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=0 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    RLM_CHILD_EXTENSIONS=0 \
+    rlm_query "Root with child ext off"
+)
+# At depth 0, RLM_CHILD_EXTENSIONS doesn't apply (depth not > 0)
+assert_not_contains "G37: root keeps extensions" "--no-extensions" "$OUTPUT"
+
+# G38: RLM_CHILD_EXTENSIONS=0 applies at depth > 0
+OUTPUT=$(
+    CONTEXT="$TEST_TMP/ctx.txt" \
+    RLM_DEPTH=1 RLM_MAX_DEPTH=3 \
+    RLM_PROVIDER=test RLM_MODEL=test \
+    RLM_CHILD_EXTENSIONS=0 \
+    rlm_query "Child with ext off"
+)
+assert_contains "G38: child extensions disabled" "--no-extensions" "$OUTPUT"
 
 
 # ─── Summary ──────────────────────────────────────────────────────────────
