@@ -1,0 +1,32 @@
+#!/bin/bash
+# Pre-commit hook for ypi
+# Handles: gitleaks secret scanning + sops encryption verification
+#
+# Install: git config core.hooksPath .githooks
+
+# --- Gitleaks: scan staged changes for secrets ---
+if command -v gitleaks &>/dev/null; then
+    gitleaks protect --staged --no-banner
+    if [ $? -ne 0 ]; then
+        echo "⛔ gitleaks detected secrets in staged files!" >&2
+        echo "Fix the leak or add to .gitleaksignore if it's a false positive." >&2
+        exit 1
+    fi
+else
+    echo "⚠️  gitleaks not installed — skipping secret scan" >&2
+fi
+
+# --- Prevent committing unencrypted files in private/ ---
+for file in $(git diff --cached --name-only | grep '^private/'); do
+    if [ ! -f "$file" ]; then
+        continue  # deleted file
+    fi
+    if ! head -1 "$file" | grep -q '"data": "ENC\[' 2>/dev/null && \
+       ! head -5 "$file" | grep -q '"sops"' 2>/dev/null; then
+        echo "⛔ $file appears to be unencrypted plaintext!" >&2
+        echo "   Run: sops encrypt -i $file" >&2
+        exit 1
+    fi
+done
+
+exit 0

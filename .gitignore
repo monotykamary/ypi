@@ -1,15 +1,4 @@
-# Dependencies
-node_modules/
-__pycache__/
-*.pyc
-.venv/
-venv/
-
-# Build output
-dist/
-*.js
-*.js.map
-*.d.ts
+# ypi — recursive coding agent wrapping Pi
 
 # Environment
 .env
@@ -23,5 +12,14 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs & traces
 *.log
+/tmp/
+
+# Python (if any scripts added)
+__pycache__/
+*.pyc
+.venv/
+
+# Node (pi-mono submodule has its own)
+node_modules/
