@@ -1,0 +1,118 @@
+#!/bin/bash
+# ypi installer — one-line install:
+#   curl -fsSL https://raw.githubusercontent.com/rawwerks/ypi/master/install.sh | bash
+#
+# Installs ypi + Pi coding agent. Requires: npm (or bun), git, bash.
+# Optional: jj (for workspace isolation), sops + age (for encrypted notes)
+
+set -euo pipefail
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+DIM='\033[0;90m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+info()  { echo -e "${GREEN}▸${RESET} $1"; }
+warn()  { echo -e "${RED}▸${RESET} $1"; }
+dim()   { echo -e "${DIM}  $1${RESET}"; }
+
+# ── Check prerequisites ──────────────────────────────────────────────────
+
+MISSING=""
+command -v git &>/dev/null || MISSING="$MISSING git"
+command -v bash &>/dev/null || MISSING="$MISSING bash"
+
+if [ -n "$MISSING" ]; then
+    warn "Missing required tools:$MISSING"
+    exit 1
+fi
+
+# Need npm or bun for Pi
+HAS_NPM=false
+HAS_BUN=false
+command -v npm &>/dev/null && HAS_NPM=true
+command -v bun &>/dev/null && HAS_BUN=true
+
+if [ "$HAS_NPM" = false ] && [ "$HAS_BUN" = false ]; then
+    warn "Need npm or bun to install Pi. Install Node.js: https://nodejs.org"
+    exit 1
+fi
+
+# ── Install Pi if not present ────────────────────────────────────────────
+
+if ! command -v pi &>/dev/null; then
+    info "Installing Pi coding agent..."
+    if [ "$HAS_BUN" = true ]; then
+        bun install -g @mariozechner/pi-coding-agent
+    else
+        npm install -g @mariozechner/pi-coding-agent
+    fi
+    dim "Installed $(pi --version 2>/dev/null | head -1 || echo 'pi')"
+else
+    dim "Pi already installed: $(which pi)"
+fi
+
+# ── Clone ypi ────────────────────────────────────────────────────────────
+
+INSTALL_DIR="${YPI_DIR:-$HOME/.ypi}"
+
+if [ -d "$INSTALL_DIR" ]; then
+    info "Updating ypi at $INSTALL_DIR..."
+    cd "$INSTALL_DIR"
+    git pull --quiet
+    git submodule update --init --depth 1 --quiet
+else
+    info "Cloning ypi to $INSTALL_DIR..."
+    git clone --quiet https://github.com/rawwerks/ypi.git "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+    git submodule update --init --depth 1 --quiet
+fi
+
+# ── Add to PATH ──────────────────────────────────────────────────────────
+
+SHELL_NAME="$(basename "${SHELL:-/bin/bash}")"
+EXPORT_LINE="export PATH=\"$INSTALL_DIR:\$PATH\""
+RC_FILE=""
+
+case "$SHELL_NAME" in
+    zsh)  RC_FILE="$HOME/.zshrc" ;;
+    bash) RC_FILE="$HOME/.bashrc" ;;
+    fish) RC_FILE="$HOME/.config/fish/config.fish"
+          EXPORT_LINE="set -gx PATH $INSTALL_DIR \$PATH" ;;
+    *)    RC_FILE="$HOME/.profile" ;;
+esac
+
+if [ -n "$RC_FILE" ] && ! grep -qF "$INSTALL_DIR" "$RC_FILE" 2>/dev/null; then
+    echo "" >> "$RC_FILE"
+    echo "# ypi — recursive coding agent" >> "$RC_FILE"
+    echo "$EXPORT_LINE" >> "$RC_FILE"
+    info "Added to PATH in $RC_FILE"
+    dim "Run: source $RC_FILE   (or open a new terminal)"
+else
+    dim "Already in PATH"
+fi
+
+# ── Set up git hooks ────────────────────────────────────────────────────
+
+cd "$INSTALL_DIR"
+git config core.hooksPath .githooks 2>/dev/null || true
+
+# ── Report optional tools ───────────────────────────────────────────────
+
+echo ""
+info "ypi installed! ✓"
+echo ""
+dim "Required:"
+command -v pi &>/dev/null && dim "  ✓ pi ($(which pi))" || dim "  ✗ pi"
+echo ""
+dim "Optional:"
+command -v jj &>/dev/null && dim "  ✓ jj (workspace isolation)" || dim "  · jj — install for workspace isolation: https://martinvonz.github.io/jj/"
+command -v sops &>/dev/null && dim "  ✓ sops (encrypted notes)" || dim "  · sops — install for encrypted private/: https://github.com/getsops/sops"
+command -v gitleaks &>/dev/null && dim "  ✓ gitleaks (secret scanning)" || dim "  · gitleaks — install for pre-commit scanning: https://github.com/gitleaks/gitleaks"
+echo ""
+echo -e "${BOLD}Get started:${RESET}"
+echo "  ypi                    # interactive"
+echo "  ypi \"What does this repo do?\"   # one-shot"
+echo ""

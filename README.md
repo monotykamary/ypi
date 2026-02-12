@@ -40,11 +40,15 @@ Pi already has a bash REPL. We add one function — `rlm_query` — and a system
 ### Install
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/rawwerks/ypi/master/install.sh | bash
+```
+
+Or manually:
+
+```bash
 git clone https://github.com/rawwerks/ypi.git
 cd ypi
 git submodule update --init --depth 1  # pulls pi-mono
-
-# Add to PATH
 export PATH="$PWD:$PATH"
 ```
 
