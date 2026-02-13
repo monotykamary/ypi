@@ -965,6 +965,65 @@ OUTPUT=$(
 assert_contains "G47: RLM_JSON=0 works" "MOCK_PI_CALLED" "$OUTPUT"
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# RLM_SESSIONS TESTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "=== rlm_sessions ==="
+
+# Set up a fake session directory with a session file
+SESSION_DIR="$TEST_TMP/sessions_test"
+mkdir -p "$SESSION_DIR"
+cat > "$SESSION_DIR/abc123_d0_c1.jsonl" << 'SESSION_DATA'
+{"type":"session","version":3,"id":"test-uuid","timestamp":"2026-01-15T10:00:00Z","cwd":"/tmp"}
+{"type":"message","id":"msg1","parentId":null,"timestamp":"2026-01-15T10:00:01Z","message":{"role":"user","content":"hello world"}}
+{"type":"message","id":"msg2","parentId":"msg1","timestamp":"2026-01-15T10:00:02Z","message":{"role":"assistant","content":"hi there"}}
+SESSION_DATA
+
+# G48: rlm_sessions lists sessions when RLM_SHARED_SESSIONS is default (1)
+OUTPUT=$(
+    RLM_SESSION_DIR="$SESSION_DIR" \
+    RLM_TRACE_ID="abc123" \
+    "$PROJECT_DIR/rlm_sessions" list
+)
+assert_contains "G48: lists sessions by default" "abc123_d0_c1.jsonl" "$OUTPUT"
+
+# G49: RLM_SHARED_SESSIONS=0 disables rlm_sessions
+OUTPUT=$(
+    RLM_SESSION_DIR="$SESSION_DIR" \
+    RLM_TRACE_ID="abc123" \
+    RLM_SHARED_SESSIONS=0 \
+    "$PROJECT_DIR/rlm_sessions" list 2>&1
+)
+assert_contains "G49: SHARED_SESSIONS=0 disables" "disabled" "$OUTPUT"
+assert_not_contains "G49: no session listed" "abc123_d0_c1.jsonl" "$OUTPUT"
+
+# G50: RLM_SHARED_SESSIONS=1 explicitly enables
+OUTPUT=$(
+    RLM_SESSION_DIR="$SESSION_DIR" \
+    RLM_TRACE_ID="abc123" \
+    RLM_SHARED_SESSIONS=1 \
+    "$PROJECT_DIR/rlm_sessions" list
+)
+assert_contains "G50: SHARED_SESSIONS=1 enables" "abc123_d0_c1.jsonl" "$OUTPUT"
+
+# G51: --trace filters to current trace ID
+cat > "$SESSION_DIR/other99_d0_c1.jsonl" << 'SESSION_DATA'
+{"type":"session","version":3,"id":"other-uuid","timestamp":"2026-01-15T11:00:00Z","cwd":"/tmp"}
+{"type":"message","id":"msg1","parentId":null,"timestamp":"2026-01-15T11:00:01Z","message":{"role":"user","content":"different trace"}}
+SESSION_DATA
+
+OUTPUT=$(
+    RLM_SESSION_DIR="$SESSION_DIR" \
+    RLM_TRACE_ID="abc123" \
+    "$PROJECT_DIR/rlm_sessions" --trace
+)
+assert_contains "G51: trace filter includes matching" "abc123_d0_c1.jsonl" "$OUTPUT"
+assert_not_contains "G51: trace filter excludes other" "other99_d0_c1.jsonl" "$OUTPUT"
+rm -rf "$SESSION_DIR"
+
+
 # ─── Summary ──────────────────────────────────────────────────────────────
 
 echo ""

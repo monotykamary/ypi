@@ -26,13 +26,15 @@
     "ypi": "./ypi",
     "rlm_query": "./rlm_query",
     "rlm_cost": "./rlm_cost",
-    "rlm_parse_json": "./rlm_parse_json"
+    "rlm_parse_json": "./rlm_parse_json",
+    "rlm_sessions": "./rlm_sessions"
   },
   "files": [
     "ypi",
     "rlm_query",
     "rlm_cost",
     "rlm_parse_json",
+    "rlm_sessions",
     "SYSTEM_PROMPT.md",
     "install.sh",
     "README.md",

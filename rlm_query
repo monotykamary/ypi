@@ -221,6 +221,7 @@ export RLM_TRACE_ID="${RLM_TRACE_ID}"
 export RLM_SESSION_DIR="${RLM_SESSION_DIR:-}"
 export RLM_BUDGET="${RLM_BUDGET:-}"
 export RLM_COST_FILE="${RLM_COST_FILE:-}"
+export RLM_SHARED_SESSIONS="${RLM_SHARED_SESSIONS:-1}"
 
 # At max depth: remove rlm_query from PATH so the child can't recurse.
 # The child still gets full tools (bash, read, write, edit) — it just

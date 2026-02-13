@@ -4,7 +4,7 @@
 # Deterministic steps (tests, version bumps, publish) use exec.
 # Judgment steps (changelog, version decision) use session.
 #
-# Run: rp pi .prose/release.prose
+# Run: rp ypi .prose/release.prose
 
 # --- Gather state ---
 

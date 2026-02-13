@@ -23,6 +23,7 @@
 #   RLM_CHILD_EXTENSIONS — override extensions for depth > 0 (default: same as parent)
 #   RLM_BUDGET         — max dollar spend for entire recursive tree (default: none)
 #   RLM_JSON           — set to "0" to disable JSON mode / cost tracking (default: 1)
+#   RLM_SHARED_SESSIONS — set to "0" to disable session log sharing (default: 1)
 #   PI_TRACE_FILE      — path to trace log for all calls with timing (default: none)
 
 set -euo pipefail
@@ -52,6 +53,7 @@ export RLM_EXTENSIONS="${RLM_EXTENSIONS:-1}"
 [ -n "${RLM_CHILD_EXTENSIONS:-}" ] && export RLM_CHILD_EXTENSIONS
 [ -n "${RLM_BUDGET:-}" ]           && export RLM_BUDGET
 export RLM_JSON="${RLM_JSON:-1}"
+export RLM_SHARED_SESSIONS="${RLM_SHARED_SESSIONS:-1}"
 
 # Session tree tracing — generate a trace ID that links all recursive sessions
 export RLM_TRACE_ID="${RLM_TRACE_ID:-$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')}"

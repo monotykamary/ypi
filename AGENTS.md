@@ -146,6 +146,32 @@ If that breaks, you broke yourself. Revert.
 - If you need to confirm a background process started, `sleep 2` max, then check once
 - Do NOT `sleep 30` or `sleep 60` — that blocks the user
 
+### Reading session history
+Use `rlm_sessions` to inspect what you or other agents have done:
+```bash
+rlm_sessions                     # List all sessions for this project
+rlm_sessions --trace             # List only sessions from current recursive tree
+rlm_sessions read --last         # Read most recent session transcript
+rlm_sessions read <filename>     # Read a specific session
+rlm_sessions grep "pattern"      # Search across all sessions
+rlm_sessions grep -t "pattern"   # Search only current trace
+```
+
+Common patterns:
+```bash
+# What is a background ypi doing right now?
+rlm_sessions read --last | tail -20
+
+# What did a sub-agent find?
+rlm_sessions --trace
+rlm_sessions read <trace-file> | tail -20
+
+# Did any previous agent work on X?
+rlm_sessions grep "feature-name"
+```
+
+Set `RLM_SHARED_SESSIONS=0` to disable session sharing (full isolation).
+
 ### Starting a feature branch:
 ```bash
 jj new -m "feat: description of the feature"
@@ -189,6 +215,7 @@ testing between changes. One variable at a time.
 | `RLM_CHILD_MODEL` | Model override for depth > 0 | (none = same as parent) |
 | `RLM_CHILD_PROVIDER` | Provider override for depth > 0 | (none = same as parent) |
 | `RLM_JJ` | Enable jj workspace isolation | `1` (set `0` to disable) |
+| `RLM_SHARED_SESSIONS` | Allow agents to read sibling/parent session logs | `1` (set `0` to disable) |
 
 ## Bugs We've Found (and must not re-introduce)
 
