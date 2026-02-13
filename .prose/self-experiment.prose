@@ -1,0 +1,65 @@
+# self-experiment.prose
+# Test a hypothesis about ypi by running ypi on itself.
+#
+# Run: rp ypi .prose/self-experiment.prose
+#
+# Monitor from another terminal:
+#   rlm_sessions read --last | tail -30
+#   rlm_sessions grep "pattern"
+
+input hypothesis: "What you think will happen and why"
+input task: "A concrete coding task that tests the hypothesis"
+
+# --- Design ---
+
+let design = session "Design an A/B experiment"
+  prompt: """
+    Hypothesis: {hypothesis}
+    Task: {task}
+    Repo: ypi (recursive coding agent — you ARE running inside it)
+
+    Design a minimal experiment:
+    1. What are conditions A and B? (one env var, one prompt change, etc.)
+    2. What task do the agents perform? (must be real work on this repo)
+    3. What do you measure? (time, accuracy, tool usage, errors hit)
+    4. How many trials? (start small — 1 each, scale if promising)
+
+    Write a bash script to experiments/<name>/run.sh that:
+    - Takes A or B as argument
+    - Uses rlm_query to spawn children
+    - Logs timing and outputs to experiments/<name>/results/
+    - Is resumable (skip completed trials)
+
+    Keep it simple. We're looking for signal, not statistical significance.
+  """
+
+# --- Run A ---
+
+let result_a = exec "bash experiments/*/run.sh A 2>&1 | tail -30"
+  on-fail: "continue"
+
+# --- Run B ---
+
+let result_b = exec "bash experiments/*/run.sh B 2>&1 | tail -30"
+  on-fail: "continue"
+
+# --- Analyze ---
+
+output analysis = session "Analyze results and decide"
+  prompt: """
+    Hypothesis: {hypothesis}
+
+    Condition A results:
+    {result_a}
+
+    Condition B results:
+    {result_b}
+
+    Analyze:
+    1. Did the measured behavior differ between A and B?
+    2. Was the hypothesis supported, refuted, or inconclusive?
+    3. Recommendation: keep the feature, change it, or kill it?
+    4. If inconclusive, what would a better experiment look like?
+
+    Be honest. Negative results are results.
+  """

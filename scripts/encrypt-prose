@@ -23,7 +23,7 @@ if [[ "${1:-}" == "--check" ]]; then
     CHECK_ONLY=true
 fi
 
-SOPS_DIRS=(".prose/runs" ".prose/agents" "private")
+SOPS_DIRS=(".prose/runs" ".prose/agents" "private" "experiments")
 COUNT=0
 
 for dir in "${SOPS_DIRS[@]}"; do

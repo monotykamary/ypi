@@ -17,7 +17,7 @@ else
 fi
 
 # --- Block unencrypted files in sops-managed paths ---
-for file in $(git diff --cached --name-only | grep -E '^(private/|\.prose/runs/|\.prose/agents/)'); do
+for file in $(git diff --cached --name-only | grep -E '^(private/|experiments/|\.prose/runs/|\.prose/agents/)'); do
     if [ ! -f "$file" ]; then
         continue
     fi

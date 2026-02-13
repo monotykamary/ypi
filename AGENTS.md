@@ -93,6 +93,7 @@ ypi/
 ├── .githooks/pre-commit   # Safety net for direct git usage
 ├── .github/workflows/     # CI + upstream compat checks
 ├── contrib/extensions/    # Extensions not loaded by default (hashline, etc.)
+├── experiments/           # Self-experiments (private, encrypted before push)
 ├── private/               # Sops-encrypted notes (private, encrypted before push)
 ├── pi-mono/               # Git submodule: upstream Pi coding agent (reference)
 └── README.md
@@ -145,6 +146,10 @@ If that breaks, you broke yourself. Revert.
 - Use `uv run` for Python scripts that need dependencies
 - If you need to confirm a background process started, `sleep 2` max, then check once
 - Do NOT `sleep 30` or `sleep 60` — that blocks the user
+- Run A/B conditions **concurrently** in separate tmux windows, not sequentially
+
+### Self-experimentation
+You are ypi. When you're unsure whether a feature helps or hurts, **test it on yourself.** Write a small A/B experiment in `experiments/`, run both conditions with `rlm_query`, and measure. Negative results are results — don't keep features out of sunk-cost loyalty. See `.prose/self-experiment.prose` for the workflow.
 
 ### Reading session history
 Use `rlm_sessions` to inspect what you or other agents have done:
@@ -238,7 +243,7 @@ testing between changes. One variable at a time.
 **Test**: E1 (small context, should answer directly without sub-calls).
 
 ### Secrets & Encryption
-Files in `private/`, `.prose/runs/`, and `.prose/agents/` are encrypted with
+Files in `private/`, `experiments/`, `.prose/runs/`, and `.prose/agents/` are encrypted with
 [sops](https://github.com/getsops/sops) + [age](https://github.com/FiloSottile/age)
 before push. They live **plaintext on disk** so agents and editors can read them.
 

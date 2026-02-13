@@ -118,6 +118,20 @@ rlm_cost          # "$0.042381"
 rlm_cost --json   # {"cost": 0.042381, "tokens": 12450, "calls": 3}
 ```
 
+### Pi Compatibility
+
+ypi is a thin layer on top of Pi. We strive not to break or duplicate what Pi already does:
+
+| Pi feature | ypi behavior | Tests |
+|---|---|---|
+| **Session history** | Uses Pi's native `~/.pi/agent/sessions/` dir. Child sessions go in the same dir with trace-encoded filenames. No separate session store. | G24–G30 |
+| **Extensions** | Passed through to Pi. Children inherit extensions by default. `RLM_EXTENSIONS=0` disables. | G34–G38 |
+| **System prompt** | Built from `SYSTEM_PROMPT.md` + `rlm_query` source, written to a temp file, passed via `--system-prompt` (file path, never inlined as shell arg). | T8–T9 |
+| **`-p` mode** | All child Pi calls run non-interactive (`-p`). ypi never fakes a terminal. | T3–T4 |
+| **`--session` flag** | Used when `RLM_SESSION_DIR` is set; `--no-session` otherwise. Never both. | G24, G28 |
+
+If Pi changes how sessions or extensions work, our guardrail tests should catch it.
+
 ---
 
 ## Contributing

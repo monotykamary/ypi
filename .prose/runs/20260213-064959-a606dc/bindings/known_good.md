@@ -1,15 +1,14 @@
-# known_good
-
-kind: let
-
-source:
-```prose
-let known_good = exec "cat .pi-version 2>/dev/null || echo unknown"
-```
-
-exit_code: 0
-stderr: (empty)
-
----
-
-0.52.10
+{
+	"data": "ENC[AES256_GCM,data:Cta/k09/OC12Tlg3Sce9jkwNfC4zIECuqJy1j4iMxi8pqJWgqZ2LsC0KjDdCWc6332lwy0SypSG5pGtsl91IThHDR9rKjcDPhN+fEW65Ish/dzByjSnnIP2rYeMi2YkDwEwcLlLb9hDqEKtipXFQ0G26sXZBH5pAhyr7e9hLD0Jl7ozdc6apAE8ISpo7ZKSCHUnGQSDORnzoWLnLHBU=,iv:NW9Hf33AE8sMqv3bp6tHA9IRUH5yjZ84o+0UU5V56nU=,tag:OWd+ZkIlqNvo8q4HP/dN0Q==,type:str]",
+	"sops": {
+		"age": [
+			{
+				"recipient": "age1z28am8hy9n85h3e9u5as87x3ae04t65sk8zuszwydaqsjmye5sgsc9rqxf",
+				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB6U3AzVWd1NWZKV3ljVzV5\nMHNhbTR5cDFpV2xUbWdhUEdmZ3RHeWxwcGc0ClR1YnlBb2lwL2ZmWlZoWWJ5aWxP\nSmRUTGMvOVNWR2drc2JMcjVBb0dObzgKLS0tIFR3bkM3TlMrbXk5SGM3MkxLM3hj\naTZKTHNuUURTZjBPN29GR3FVWjRaVE0KN0mRxMFSPdrJ0Vhsdavj5+fEOSYyIa0a\npXIEc73Xm+86okAVXNyZSc8AovZ39iwV7BCXs/ccf9umVMbtSNHMNA==\n-----END AGE ENCRYPTED FILE-----\n"
+			}
+		],
+		"lastmodified": "2026-02-13T15:51:30Z",
+		"mac": "ENC[AES256_GCM,data:72FTxlPTVFjBO5TWGi/kkPVMa+JriS3BKHuStqoJNKOzUaE8Vm/xfHBdp5prphu08+uXKyZO+H/4Cr6SJdXkKX7f+5L3z3XfMR1sYhSaqGXULdpnWC1p6JZgs5zZmh8349Sj6vyd6zOqoGpbNM3V1cZJH9WZICrx4OXZdi4PpYo=,iv:L94VGKAtD3YY5nmm5Y9Sz7Dj7o/jAJ0hHuJHE8SFsgU=,tag:9CevJIXyeB8VTvsgA5Mn/w==,type:str]",
+		"version": "3.11.0"
+	}
+}

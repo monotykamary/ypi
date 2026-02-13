@@ -1,41 +1,14 @@
-# Experiment: Does Tree-Awareness Help Sub-Agents?
-
-## Hypothesis
-
-Sub-agents that know their position in the recursion tree (depth, sibling
-count, parent's goal, what other chunks cover) will produce better answers
-than sub-agents that only see their chunk + a question.
-
-## Design
-
-**Task:** Extract specific facts from a multi-section document that requires
-chunking. The document is deliberately too large for one context window, so
-the parent must split it across multiple sub-agents and combine results.
-
-**Conditions:**
-
-| Condition | What the sub-agent sees |
-|-----------|------------------------|
-| A: Blind (baseline) | Just the chunk + question |
-| B: Position-aware | Chunk + "You are chunk 3 of 5, lines 200-300" |
-| C: Goal-aware | Chunk + parent's overall goal + what other chunks cover |
-| D: Full tree | Chunk + position + goal + sibling info + depth |
-
-**Metrics:**
-- **Recall** — did it find all facts in its chunk?
-- **Precision** — did it hallucinate facts not in its chunk?
-- **Format compliance** — did it follow the output format?
-- **Redundancy** — did it repeat information unnecessarily?
-
-**Controls:**
-- Same document, same chunks, same model, same temperature
-- Multiple runs per condition (LLM non-determinism)
-- Automated scoring via judge LLM
-
-## How to run
-
-```bash
-bash experiments/tree-awareness/run.sh
-```
-
-Results go to `experiments/tree-awareness/results/`.
+{
+	"data": "ENC[AES256_GCM,data:+4Yt6q1/1bltjnpi0oAmZzO4EaoD0zgsknsKie5Li0ncX9ATkkXl1Nn8wvMOVCy9BQFgCwXOQcPJYwHl8ruVaEF6mBaQ30AYU0kWOr8LMcTKsWBhHsGpj+2tcujFh9hEcv3OjtI2cZqxDvwcH0Gy/8SVaioApv8dvOjlbnFc7OkUUOqOUNt/g2XmtVQCxck/9vXjieGXDQQ+1ikSBgQWd7FoRVFoFNMr1uQSQ5lx+NsVZRLfDwwQGjlxRX822wlOPFztKOZuwYZfTdVJB2F4MgXiqvRghDB8IR853hE19geSAWs/KG6oMtOQxDM8wOFtPwqAp8Qey0ll98HpXtaekVMGYqrwgeXyW6s3OgnMrD5k1AHfCP/NArc0RlrHLwzKAWkL9UzFnlbggqZUKq2hoQQnA66JUqUKhjyRR4l9ZCWhcamJXrM/EU5unIQZoMFFCFPVdAziWiIRbo9Cn8q3D+F7Vq4BK44PUBF24EavBqzFhY0Db7CCE8onAK4teJJvAVaEXsT9nrHK2LFaMPrxxNYSATUnZlvfi39aX/J5iab/NgA6b7QBmu1ik4iWpCVu4VwGjkHCp0C5qTK2wQPe9UlNayI1Q/Ap78X0GS4qbL7E0lZQSjl8e7k/0A4EhkbJTYorq/yt6QGyGoqSlSO/9lMWk9mOCMf+2C1VZc1NkgzcHgDTbGd1V7hEN7uY1RXMjFNDyTCc0FgnM3U6oRqzlePvVvftzSNX68Bcx2A7OL02A6KBUlEEDjcb0wkyq8kPxLRARJ6E9BM07CdNgHzDv8Q1eDZdMSgzgXzSCDoG5AqAFKNj9H2qb9oLRpn6ZnLuEKSmd4cD7bXopQURxxlvNt5ZNyft/PnWv/Ama70ftlVFhe5MFQKMeaETxdMdRboBL4/BA7SZxNYOupR9zweO4yMXZFqJpiMnrHOb+VmA2hSg17nsFKusy8O5cf0msq7Duu3vzmOBOWqAieIi69BvYjiGOXMW0K6d6l9DScm4xJ+H//aR9H4fS6Vrx2o+lL5Vvr356WxQyuY5UDs2esWtqdCnu7u5jHlNqkzhojvQTbainqi5X/Z7f1aEqsVu7KezI2lcVJe7MaI50oHDh4s3rxtZKzSVMfAvcGmp5Jhz/9yPaGtXk65EkuUtQaitc3cGsrZY55QDEn/UCS2txBVd1WUnM2NRVenSvdp7kSR9O0LKxuR4Xx0sPe/h+Vv93hHWGSLHyHCUQ37d2uFNF7CbEDwBhxZ4YOY8tvdnUGPku+wGaA5/X8pvloWFs9whgg2D3qWFla11n61YOq42F6UPP/WHKPVJrA66HzJHtuvPrZtS0CYB1jE8rjXCPI27UhUEb4IDsyxtNVkrr+0tOAt2hzo49Dbga3VTLeE5Ng3qwoVgyzeLIxwGHbOyfypw+1DxFpeXwkaq+8zRwNVirc+Yf82YpDVBiGieFCfZqFXeFNt3CdknoZ7Uib1mUXMolZXdpiHFd8EdLtR51inS9Krcrgky5EZ0dlh3+LyiI4Ate5Ao7GM8dv+dZpaR9HjToIXnAHy0fvr0gYWW74mKM7KxFgxtr9eEf8S2ydWLGJM5zEbhQLhXflhHjRq2xqRMWB7F91WxQdx+TBF2qf1xq1oX7+e04VErLLtB1mHEaU6C/qoXIxnCmRQS+h+UJuzZYAX56LEaT3DwHo48Xs0i/uN+YZPvt+ZCjnWbCboE4aER4/Txh6gUIhavB8Anmf4tJP079Pa16rigCLTcr136b6ZhZEZV4SovS+XyY73a86AQJuZaroqqzq0W3yWlH04lLmVVg0pLML+KG+xkWnM8eJUTJ2EaTdpG6oHoFgzZVgiRHPCB4aCEvSaRjFSi2aYMQONJZ0TlTxfsZHy30QGMBA==,iv:+XCQeZbLRuPwCyYI310h+rFY6QdsXBTZu/fOsDeh0ss=,tag:26qX2sqQXvPXhvYJBAxfjw==,type:str]",
+	"sops": {
+		"age": [
+			{
+				"recipient": "age1z28am8hy9n85h3e9u5as87x3ae04t65sk8zuszwydaqsjmye5sgsc9rqxf",
+				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBPRFJWeDUreTg0R2V1Y3Bm\nZWhRaVVucnRWb0o1NVcwcVZ0Sk1XbXJIUUc0Cm4wY1R0blpnYTk1dGVWdytYeUtY\nUlorWnY3RFRJdlljLytZMExmOWVONGsKLS0tIE1VRzBxNjNDaGdzVDFXS21VeU5M\nZVBHVTVVRHlSRXVFbllqUmp6N2NVQ2sK/xGMot7y6h2QlXdsHhUQ6ZSDp+73iEGu\nKfiIP70jOHHhTTPGpi7jTn2WgTA5KrR1Ou+qiwPWVWq68CA8mAlAWA==\n-----END AGE ENCRYPTED FILE-----\n"
+			}
+		],
+		"lastmodified": "2026-02-13T15:51:30Z",
+		"mac": "ENC[AES256_GCM,data:yikgsn8h7i1FfHk7g4GNQhhXQ80GC0hTe/V7SBIfpRvqV+80YyIUTp3E75jOE3C9JsLoNAzYLYYdk54IHK/VjuUegLf2uKYb/CiyToz3AQQDTor81NGp73XE31Rw4HDDyQOtJjQPsqAgXFyT5izpPmAcPr6bJdYvSOjzDasl5Xk=,iv:DwVWqunIx4jaPsEDyyRPcszglx4Sm/dt8gm10SglDZc=,tag:IXR/ac3SUuZZlEIaptaGIw==,type:str]",
+		"version": "3.11.0"
+	}
+}

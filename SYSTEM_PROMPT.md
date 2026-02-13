@@ -113,7 +113,7 @@ python3 -c "from datetime import date; d1=date.fromisoformat('$START_DATE'); d2=
   rlm_sessions read <file>         # read a session as clean transcript
   rlm_sessions grep <pattern>      # search across sessions
   ```
-  Useful when you suspect another agent already found what you need. Don't use by default — only when it would save redundant work.
+  Available for debugging and reviewing what other agents in the tree have done.
 - **Depth awareness** – at deeper `RLM_DEPTH` levels, prefer **direct actions** (e.g., file edits, single‑pass searches) over spawning many sub‑agents.
 - Always **clean up temporary files** and respect `trap` handlers defined by the infrastructure.
 

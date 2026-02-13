@@ -1,13 +1,14 @@
-# run:20260213-064959-a606dc check-upstream.prose
-1→ known_good ✓
-2→ installed ✓
-3→ latest ✓
-4→ anon_001 ✓
-5→ if(false) skip
-6→ unit ✓
-7→ guardrails ✓
-8→ extensions ✓
-9→ if(true)
-10→ exec .pi-version ✓
-11→ anon_002 ✓
----end 2026-02-13T06:50:45Z
+{
+	"data": "ENC[AES256_GCM,data:pXPPOx0gNGSWTA1HZ0x33/UU0f3sme8B4J1QYnnfZNVz9zSo+/0Ei2kaF8p5+WjP2HTTTuRW2e9wTr9rzoTl6FbEhbycgUjpPR63xU+Sb1gBW4LVK1xyx0DrcUdV5aPZSAPVVIZ2D/qTsJXy7hP/3LZW4lvjyPaZbblwVhQ9mkOHpCv+fuOnzsfvXXRVSIvVAety42xqPpa4KavkoQsdK2vslFkA6mshHM1zpfX4OHt+tGt5iEdNsM+fFfm4+c6clNtW4i/8830Kz64Lmkq6YUc21EZ556tXem5LGR9pUYQoN5Mbbl91immZ3PbFa84N0d4Mkw7Rd/df44zJJKO5Xm91ZFIKBA3psuqJ6S9g/I3+9HVV0wVMELyD0cDc,iv:YMawyNVlxZMUrX3ONycs9RQJB0i4wBi1MNYwpmi0SY0=,tag:k3G2oFIRiasP9tVbYRToCA==,type:str]",
+	"sops": {
+		"age": [
+			{
+				"recipient": "age1z28am8hy9n85h3e9u5as87x3ae04t65sk8zuszwydaqsjmye5sgsc9rqxf",
+				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBhVWZ3cWd2cDUxSnE1NTlm\nKzhQZE40cEZGei85ZFQ5bWgzYUcyNmJmMzBVCkFJT1V3SGpjdTJqZHFFbWN6WUhp\nVUVIbkl3VG8rSUdsQXhKM0VMM1dta0kKLS0tIEVqMXBvWmRDenFKNkJ6MGNNRUZt\nZzhWREtwWHpYYllVSFFaYU9rSGRyMXcKO9qMTPF82QeXuXGFhsAKcpfnYS8jf3xC\njKFeDjAXYnunND7UAXz3uh72qrV2ddSAgQD82Lmv46WeAcG0uzFVcA==\n-----END AGE ENCRYPTED FILE-----\n"
+			}
+		],
+		"lastmodified": "2026-02-13T15:51:30Z",
+		"mac": "ENC[AES256_GCM,data:6Qfkdu3SMf0eoknPPcZ6KpM6m5irhcwVRttsRRe0hXaoyr8YbC2DgCpHmDp2XfDy1pIA7WKE8tuSdsrTx6U1M/JFt4ufoJUAfL8kLtYcPUsZo90d6G5gDy2TGNYXwia4PR3gnCeoClJu74DyO+Yyxp7PLckbi3Q4Q1dv2vfhnOw=,iv:vmM2oEQy6c4u6eAxEsqD2CFvXlfhD1fzdl2EFuIxzCE=,tag:NoCT/LuzMQ8G3RgYL3+c9Q==,type:str]",
+		"version": "3.11.0"
+	}
+}
