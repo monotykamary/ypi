@@ -15,11 +15,6 @@ Thumbs.db
 # Logs & traces
 *.log
 /tmp/
-
-# OpenProse runtime state
-.prose/runs/
-.prose/agents/
-
 # Python (if any scripts added)
 __pycache__/
 *.pyc
