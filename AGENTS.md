@@ -1,14 +1,26 @@
 # Agent Instructions — ypi
 
-## Landing
-
-When the user says **"land it"** or **"land the plane"**, run:
-
+## Running Prose Programs & Background Tasks
+Launch long-running tasks in tmux with a sentinel file. The `notify-done` extension
+watches `/tmp/ypi-signal-*` and **injects a message into your conversation** when
+the task finishes — no sleeping, no polling, no `tmux capture-pane` loops.
 ```bash
-rp ypi .prose/land.prose
+# Launch with sentinel (you'll be woken up when it finishes)
+tmux send-keys -t eval:land 'cd ~/Documents/GitHub/ypi && rp ypi .prose/land.prose; echo done > /tmp/ypi-signal-land' Enter
+# That's it. Keep working on other things. You'll get a message like:
+#   ⚡ Background task "land" completed: done
+# ...and a new turn is triggered so you can respond to it.
 ```
+**IMPORTANT: Do NOT poll or sleep-loop waiting for background tasks.**
+The extension uses `sendMessage({triggerTurn: true})` to wake you. Just keep
+working on whatever else needs doing — you'll be interrupted when it's ready.
+**Key programs:**
+- `rp ypi .prose/land.prose` — "land it" / "land the plane": tests, push, handoff
+- `rp ypi .prose/release.prose confirm_release='Approved.'` — cut an npm release
+- `rp ypi .prose/check-upstream.prose` — verify Pi compatibility
+- `rp ypi .prose/incorporate-insight.prose insight='...'` — propagate an insight across the repo
 
-This runs all tests (fast + e2e), smoke tests `rlm_query`, encrypts private files, pushes to GitHub via jj, and writes a handoff summary. Monitor progress with `rlm_sessions read --last | tail -30`.
+Prose programs with `input` declarations need values passed as `key=value` args. Without them, the VM pauses (which hangs in `-p` mode).
 
 ## Version Control: Use jj, not git
 
@@ -152,11 +164,9 @@ If that breaks, you broke yourself. Revert.
 
 ### Running experiments and evals
 **NEVER block the main conversation waiting for a script to finish.**
-- Launch long-running work in tmux: `tmux send-keys -t eval:name 'command' Enter`
-- Check progress with `tmux capture-pane -t eval:name -p | tail -5` (no sleep)
+- Launch in tmux with a sentinel: `tmux send-keys -t eval:name 'command; echo done > /tmp/ypi-signal-name' Enter`
+- The `notify-done` extension wakes you automatically — do NOT `sleep`/poll/`capture-pane` in a loop
 - Use `uv run` for Python scripts that need dependencies
-- If you need to confirm a background process started, `sleep 2` max, then check once
-- Do NOT `sleep 30` or `sleep 60` — that blocks the user
 - Run A/B conditions **concurrently** in separate tmux windows, not sequentially
 
 ### Self-experimentation
