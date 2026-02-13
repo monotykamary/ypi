@@ -13,3 +13,10 @@
 	}
 }
 7→ encrypt ✓
+8→ push ✓
+9→ decrypt ✓
+10→ workspaces ✓
+11→ cleanup ✓
+12→ verify ✓
+13→ summary ✓
+---end 2026-02-13T11:54:22-05:00
