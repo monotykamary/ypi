@@ -72,15 +72,12 @@ ypi --provider anthropic --model claude-sonnet-4-5-20250929 "What does this code
 ```
 
 ### How It Works
-
 **Three pieces** (same architecture as Python RLM):
-
 | Piece | Python RLM | ypi |
 |---|---|---|
 | System prompt | `RLM_SYSTEM_PROMPT` | `SYSTEM_PROMPT.md` |
 | Context / REPL | Python `context` variable | `$CONTEXT` file + bash |
 | Sub-call function | `llm_query("prompt")` | `rlm_query "prompt"` |
-
 **Recursion:** `rlm_query` spawns a child Pi process with the same system prompt and tools. The child can call `rlm_query` too:
 
 ```
@@ -90,6 +87,16 @@ Depth 0 (root)    → full Pi with bash + rlm_query
 ```
 
 **File isolation with jj:** Each recursive child gets its own [jj workspace](https://martinvonz.github.io/jj/latest/working-copy/). The parent's working copy is untouched. Review child work with `jj diff -r <change-id>`, absorb with `jj squash --from <change-id>`.
+
+### Why It Works
+
+The design has three properties that compound:
+
+1. **Self-similarity** — Every depth runs the same prompt, same tools, same agent. No specialized "scout" or "planner" roles. The intelligence is in *decomposition*, not specialization. The system prompt teaches one pattern — size-first → search → chunk → delegate → combine — and it works at every scale.
+
+2. **Self-hosting** — The system prompt (SECTION 6) contains the full source of `rlm_query`. The agent reads its own recursion machinery. When it modifies `rlm_query`, it's modifying itself. This isn't a metaphor — it's the actual execution model.
+
+3. **Bounded recursion** — Five concentric guardrails (depth limit, PATH scrubbing, call count, budget, timeout) guarantee termination. The system prompt also installs *cognitive* pressure: deeper agents are told to be more conservative, preferring direct action over spawning more children.
 
 ### Guardrails
 

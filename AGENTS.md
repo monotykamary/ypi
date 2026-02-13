@@ -55,6 +55,16 @@ echo "I am at depth $RLM_DEPTH of $RLM_MAX_DEPTH"
 use that same infrastructure to help. Delegate sub-tasks to `rlm_query`. If the
 delegation fails, that's a bug you just found.
 
+## Architectural Invariants
+
+Three properties make ypi work. All are tested (E7, E8 in test_e2e.sh):
+
+1. **Self-similarity** — Same prompt, same tools, same agent at every depth. No specialized roles. The intelligence is in decomposition, not specialization.
+2. **Self-hosting** — SYSTEM_PROMPT.md (SECTION 6) contains the full source of `rlm_query`. The agent reads its own recursion machinery. When it modifies `rlm_query`, it's modifying itself.
+3. **Bounded recursion** — 5 guardrails (depth, PATH scrubbing, call count, budget, timeout) guarantee termination. The system prompt adds *cognitive* pressure: deeper agents prefer direct action.
+
+**Don't write static architecture docs.** Encode claims as tests. If a property matters, there should be an E2E test that breaks when it stops being true.
+
 ## Project Layout
 ```
 ypi/
@@ -127,6 +137,16 @@ echo "2+2=" | rlm_query "What is the answer? Just the number."
 ```
 
 If that breaks, you broke yourself. Revert.
+
+### Starting a feature branch:
+```bash
+jj new -m "feat: description of the feature"
+jj bookmark create feature-name   # optional, for pushing to GitHub
+# ... do work ...
+jj describe -m "feat: final description"
+jj bookmark set master             # when ready to land
+jj git push
+```
 
 ## Editing rlm_query Safely
 

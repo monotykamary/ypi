@@ -215,6 +215,72 @@ if should_run "E6"; then
     fi
 fi
 
+# ─── E7: Architectural invariant — small context → direct answer, no recursion ─
+# The system prompt says: check size first, read directly if small.
+# Verify the agent does NOT call rlm_query for a tiny context.
+
+if should_run "E7"; then
+    echo "--- E7: Small context → no sub-calls (architectural invariant) ---"
+    cat > "$TEST_TMP/ctx_e7.txt" << 'EOF'
+Favorite color: blue
+Favorite number: 42
+EOF
+    export CONTEXT="$TEST_TMP/ctx_e7.txt"
+    export RLM_DEPTH=0
+    export RLM_MAX_CALLS=1  # If it tries to recurse, the CALL will fail
+    unset RLM_CALL_COUNT 2>/dev/null || true
+
+    TRACE_E7="$TEST_TMP/trace_e7.log"
+    export PI_TRACE_FILE="$TRACE_E7"
+
+    START=$(date +%s)
+    OUTPUT=$(rlm_query "What is the user's favorite number? Reply with ONLY the number." 2>/dev/null || echo "ERROR")
+    ELAPSED=$(( $(date +%s) - START ))
+
+    # Check correct answer
+    if echo "$OUTPUT" | grep -q "42"; then
+        # Check no sub-calls were made (trace should show only depth 0→1, not 1→2)
+        if [ -f "$TRACE_E7" ] && grep -q "depth=1→2" "$TRACE_E7"; then
+            fail "E7: small context no-recurse" "agent recursed on a 2-line context"
+        else
+            pass "E7: small context no-recurse" "$ELAPSED"
+        fi
+    else
+        fail "E7: small context no-recurse" "expected '42', got: $(echo "$OUTPUT" | head -3)"
+    fi
+
+    export PI_TRACE_FILE="$TEST_TMP/trace.log"
+    unset RLM_MAX_CALLS RLM_CALL_COUNT 2>/dev/null || true
+fi
+
+# ─── E8: Architectural invariant — self-similarity across depths ────────
+# A child at depth 1 should behave identically to depth 0 for the same task.
+
+if should_run "E8"; then
+    echo "--- E8: Self-similarity — same answer at depth 0 and depth 1 ---"
+    cat > "$TEST_TMP/ctx_e8.txt" << 'EOF'
+The capital of France is Paris.
+The capital of Japan is Tokyo.
+EOF
+    export CONTEXT="$TEST_TMP/ctx_e8.txt"
+
+    START=$(date +%s)
+
+    export RLM_DEPTH=0
+    OUT_D0=$(rlm_query "What is the capital of Japan? Reply with ONLY the city name." 2>/dev/null || echo "ERROR")
+
+    export RLM_DEPTH=1
+    OUT_D1=$(rlm_query "What is the capital of Japan? Reply with ONLY the city name." 2>/dev/null || echo "ERROR")
+
+    ELAPSED=$(( $(date +%s) - START ))
+    export RLM_DEPTH=0
+
+    if echo "$OUT_D0" | grep -qi "Tokyo" && echo "$OUT_D1" | grep -qi "Tokyo"; then
+        pass "E8: self-similarity across depths" "$ELAPSED"
+    else
+        fail "E8: self-similarity" "depth0='$(echo "$OUT_D0" | head -1)' depth1='$(echo "$OUT_D1" | head -1)'"
+    fi
+fi
 # ─── Summary ──────────────────────────────────────────────────────────────
 
 echo ""

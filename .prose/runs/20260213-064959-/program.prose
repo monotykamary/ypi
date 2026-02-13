@@ -1,14 +1,62 @@
-{
-	"data": "ENC[AES256_GCM,data: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,iv:6+wCtXu/oIi120MwnEa+G6QMiIIM2ZCVt2RpePtd/nA=,tag:DOB0fgszvvVrT/LKZglpmA==,type:str]",
-	"sops": {
-		"age": [
-			{
-				"recipient": "age1z28am8hy9n85h3e9u5as87x3ae04t65sk8zuszwydaqsjmye5sgsc9rqxf",
-				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBqZHBLR3F5WG0rMzJyRDNP\nOS9tNkRISzdqMmxSQ2F3a2M1cHhSNXQ3MUgwCk5icUpGbHUyYzZlUnl4aVRaSlJo\nb1c3Q09EYnh4aHIrTGZMQ3ZNV243bkkKLS0tIFp4WkxhR1Q4RmJuZkE3YjdJcFlo\nbklKQnpITUxvRXpYcTkvbTJ3R2t1NDQKBQrTEamfV03mY7fmLWyRvqyKemk6IDfj\nc2S2W99qgtpSMJ/pEJ7OuUIAw7UNmGn86A7/+vl4MF2RhmFuYXSrJw==\n-----END AGE ENCRYPTED FILE-----\n"
-			}
-		],
-		"lastmodified": "2026-02-13T13:52:54Z",
-		"mac": "ENC[AES256_GCM,data:JQBNEZYx3aI9HeZSLhWsFFYPj66T5YoDNbugB3P09TX2unMCInH6+nGNri/GRIaFsET3587CYrf2VTWdYASXQxlQBqw4rYyFBRyW/G+nRPQtXLPYg3l1jJVqgwziJYHG4q8jnrLw5wke6P5b5g59OAe6tumZ1WAb5eJZq5iw32E=,iv:xzhQUs3UNv+J1GgzySdBI+CH3fv6lHQhQypjblbwJRo=,tag:ADZMn4rh1BvyEQqL56hp5w==,type:str]",
-		"version": "3.11.0"
-	}
-}
+# check-upstream.prose
+# Verify ypi compatibility with latest upstream Pi release.
+#
+# Deterministic steps (version checks, test runs) use exec.
+# Reasoning steps (diagnosing failures, writing issues) use session.
+#
+# Run: prose run .prose/check-upstream.prose
+
+let known_good = exec "cat .pi-version 2>/dev/null || echo unknown"
+let installed = exec "pi --version 2>/dev/null || echo not-installed"
+let latest = exec "npm view @mariozechner/pi-coding-agent version"
+
+session "Report version state"
+  prompt: """
+    Versions:
+      Known-good: {known_good}
+      Installed:  {installed}
+      Latest npm: {latest}
+
+    If all three match, say "Already up to date" and we're done.
+    Otherwise, summarize what changed.
+  """
+
+if **the installed version is not the latest**:
+  exec "bun install -g @mariozechner/pi-coding-agent@{latest}"
+  let installed = exec "pi --version"
+
+# --- Run tests ---
+
+let unit = exec "make test-unit"
+  on-fail: "continue"
+
+let guardrails = exec "make test-guardrails"
+  on-fail: "continue"
+
+let extensions = exec "make test-extensions"
+  on-fail: "continue"
+
+if **all three tests passed**:
+  exec "echo {latest} > .pi-version"
+  session "Summarize success"
+    prompt: """
+      All tests pass with pi {latest}.
+      Updated .pi-version from {known_good} to {latest}.
+    """
+else:
+  session "Diagnose failures"
+    prompt: """
+      Pi {latest} breaks ypi. Last known-good: {known_good}.
+
+      Unit tests:
+      {unit}
+
+      Guardrail tests:
+      {guardrails}
+
+      Extension tests:
+      {extensions}
+
+      Identify what broke and why. Check if it's a ypi bug or
+      an upstream API change. Suggest a concrete fix.
+    """

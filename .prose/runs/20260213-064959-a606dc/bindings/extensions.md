@@ -1,14 +1,15 @@
-{
-	"data": "ENC[AES256_GCM,data:wQ/R+jWkbmolqnX5db8ZWngTmevZdAFb8DfZAFo5CpfwaxyOXR/e/E+AoHYTR0c77w8VAZtGMUGtXw516KEmW8C3ndjFzIMN0TPr9txyAygqLT/M3UHhDIN73oaCaYAuheRMeDiNQK7GG+53ShQLvRbJhzRNfbI3aFy5YWcL7nUYuUKYr4gSJfHQX96C2/XI8cUrkDw26Li6R/b0t3tUuw0fIM5grKKm/oDrf5f8rg==,iv:SmXr9cOqtEYP2m+uo+9hVJnBUegkz69NKHSco9PZ2ro=,tag:s7ax25m5+kdWgl0aDViV8Q==,type:str]",
-	"sops": {
-		"age": [
-			{
-				"recipient": "age1z28am8hy9n85h3e9u5as87x3ae04t65sk8zuszwydaqsjmye5sgsc9rqxf",
-				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB6Z213WkZic0t4aXpGSGt1\ndnJDMk8vbkdTL3NlYTk0d2JSU1U3YVZ3b1NZCnFEdndEV2VaS256cEI1dE9USjdK\nMXdBbDE1NGZISng0WDl0dzJNRUpGZzQKLS0tIE4rbnpaS202ME03SmdpVHgxR2FF\nbWIrdG0rRldlUEtVSTMwUlE5Ni9JNk0KKNjTA0A/qBEcFfGffNWsi6EC+6QYu3j0\nZWDA8xa0sQN+pcz726HYGYEEXRE9Tf31/vxfYtZO3T575QGgMVQ32g==\n-----END AGE ENCRYPTED FILE-----\n"
-			}
-		],
-		"lastmodified": "2026-02-13T13:52:54Z",
-		"mac": "ENC[AES256_GCM,data:yg0RiMoI03/c4XsfiUV2gISw9EA6wghejR99/k+3bU08dWfOL8wQrvKWLFMhjPefXXyyifLQMJXAPJYRlNu75IrRjk4oOxnGK8cINdG3Bmd3LAkZQ2zRb0DB5thX36o1ndzSkkuFdcd7WZ8KuuNw03PZ+4QbZc7PddWjd7uo5A4=,iv:JSwDw60Hn5sGrIQ9HB09cY+Np7JzRjMq0DMQGk5RBr8=,tag:ukWuP9k3nxBF5y781BUtDg==,type:str]",
-		"version": "3.11.0"
-	}
-}
+# extensions
+
+kind: let
+
+source:
+```prose
+let extensions = exec "make test-extensions"
+```
+
+exit_code: 0
+stderr: (empty)
+
+---
+
+3 passed, 0 failed. All extension tests passed.
