@@ -138,6 +138,14 @@ echo "2+2=" | rlm_query "What is the answer? Just the number."
 
 If that breaks, you broke yourself. Revert.
 
+### Running experiments and evals
+**NEVER block the main conversation waiting for a script to finish.**
+- Launch long-running work in tmux: `tmux send-keys -t eval:name 'command' Enter`
+- Check progress with `tmux capture-pane -t eval:name -p | tail -5` (no sleep)
+- Use `uv run` for Python scripts that need dependencies
+- If you need to confirm a background process started, `sleep 2` max, then check once
+- Do NOT `sleep 30` or `sleep 60` — that blocks the user
+
 ### Starting a feature branch:
 ```bash
 jj new -m "feat: description of the feature"
