@@ -30,6 +30,27 @@ Requires [dirpack](https://github.com/rawwerks/dirpack) on PATH.
 ln -s "$(pwd)/contrib/extensions/dirpack.ts" ~/.pi/agent/extensions/dirpack.ts
 ```
 
+### auto-title.ts
+
+Periodically summarizes the session into a short window title. After a
+configurable number of turns or elapsed time, forks the conversation to
+a cheap `pi -p` call and sets the result as the terminal title and tmux
+window name. Stale sessions (no new turns) don't re-summarize.
+
+```bash
+ln -s "$(pwd)/contrib/extensions/auto-title.ts" ~/.pi/agent/extensions/auto-title.ts
+```
+
+Configuration:
+| Env var | Default | Description |
+|---|---|---|
+| `AUTO_TITLE_DISABLE` | `0` | Set to `1` to disable |
+| `AUTO_TITLE_TURNS` | `5` | Turns between re-summarizations |
+| `AUTO_TITLE_INTERVAL` | `300` | Seconds between time-based re-summarizations |
+| `AUTO_TITLE_INITIAL_TURNS` | `2` | Turns before first summarization |
+| `AUTO_TITLE_MODEL` | `claude-sonnet-4-20250514` | Model for summary calls |
+| `AUTO_TITLE_PREFIX` | `π` | Prefix for terminal title |
+
 ### colgrep.ts
 
 Adds semantic code search via [colgrep](https://github.com/lightonai/next-plaid/tree/main/colgrep).

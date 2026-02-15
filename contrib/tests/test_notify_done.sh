@@ -436,6 +436,187 @@ else
     fail "targeted — get instance ID" "could not read instance ID file"
 fi
 tmux send-keys -t "$TMUX_SESSION:broadcast" C-d 2>/dev/null || true
+
+# ─── Test 5: Cross-instance isolation (two concurrent instances) ─────────
+
+echo ""
+echo "--- T5: Cross-instance isolation ---"
+
+# Spin up TWO pi instances, each with its own notify-done extension and instance ID.
+# Send a targeted sentinel to instance A. Verify:
+#   - A receives it
+#   - B does NOT receive it
+# Then send a broadcast (no instance ID). Verify:
+#   - Neither receives it (blocked and deleted)
+
+TEST_PREFIX_5="ndtest5-${TEST_ID}-"
+TEST_EXT_5A=$(mktemp /tmp/ndtest_ext5a_XXXXXX.ts)
+TEST_EXT_5B=$(mktemp /tmp/ndtest_ext5b_XXXXXX.ts)
+CLEANUP_FILES+=("$TEST_EXT_5A" "$TEST_EXT_5B")
+
+for WHICH in A B; do
+    if [ "$WHICH" = "A" ]; then EXT_FILE=$TEST_EXT_5A; else EXT_FILE=$TEST_EXT_5B; fi
+    cat > "$EXT_FILE" << EXT5EOF
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { readFileSync, readdirSync, unlinkSync, writeFileSync } from "fs";
+import { randomBytes } from "crypto";
+
+const SIGNAL_DIR = "/tmp";
+const SIGNAL_PREFIX = "${TEST_PREFIX_5}";
+const POLL_INTERVAL = 2000;
+
+export default function (pi: ExtensionAPI) {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const instanceId = randomBytes(4).toString("hex");
+    process.env.YPI_INSTANCE_ID = instanceId;
+    writeFileSync("/tmp/ndtest5-instance-${TEST_ID}-${WHICH}.txt", instanceId);
+
+    pi.on("session_start", async () => {
+        timer = setInterval(() => {
+            try {
+                const files = readdirSync(SIGNAL_DIR).filter((f) => f.startsWith(SIGNAL_PREFIX));
+                for (const file of files) {
+                    const rest = file.slice(SIGNAL_PREFIX.length);
+                    const instanceMatch = rest.match(/^([0-9a-f]{8})-(.+)\$/);
+                    if (instanceMatch) {
+                        const [, targetId, name] = instanceMatch;
+                        if (targetId !== instanceId) continue;
+                        try {
+                            const content = readFileSync(\`\${SIGNAL_DIR}/\${file}\`, "utf-8").trim();
+                            unlinkSync(\`\${SIGNAL_DIR}/\${file}\`);
+                            pi.sendMessage(
+                                { customType: "notify-done", content: \`NOTIFY[\${name}]: \${content}\`, display: true },
+                                { triggerTurn: true },
+                            );
+                        } catch {}
+                    } else {
+                        try { unlinkSync(\`\${SIGNAL_DIR}/\${file}\`); } catch {}
+                    }
+                }
+            } catch {}
+        }, POLL_INTERVAL);
+    });
+
+    pi.on("session_shutdown", async () => {
+        if (timer) { clearInterval(timer); timer = null; }
+    });
+}
+EXT5EOF
+done
+
+SESSION_5A=$(mktemp /tmp/ndtest_session5a_XXXXXX.jsonl)
+SESSION_5B=$(mktemp /tmp/ndtest_session5b_XXXXXX.jsonl)
+CLEANUP_FILES+=("$SESSION_5A" "$SESSION_5B" "/tmp/ndtest5-instance-${TEST_ID}-A.txt" "/tmp/ndtest5-instance-${TEST_ID}-B.txt")
+
+# Start both instances
+tmux new-window -t "$TMUX_SESSION" -n inst-a
+tmux send-keys -t "$TMUX_SESSION:inst-a" "pi -e $TEST_EXT_5A --no-extensions --session $SESSION_5A" Enter
+tmux new-window -t "$TMUX_SESSION" -n inst-b
+tmux send-keys -t "$TMUX_SESSION:inst-b" "pi -e $TEST_EXT_5B --no-extensions --session $SESSION_5B" Enter
+sleep 8
+
+# Activate both sessions
+tmux send-keys -t "$TMUX_SESSION:inst-a" 'Say ok' Enter
+tmux send-keys -t "$TMUX_SESSION:inst-b" 'Say ok' Enter
+sleep 8
+
+# Read instance IDs
+ID_A=$(cat /tmp/ndtest5-instance-${TEST_ID}-A.txt 2>/dev/null)
+ID_B=$(cat /tmp/ndtest5-instance-${TEST_ID}-B.txt 2>/dev/null)
+
+if [ -z "$ID_A" ] || [ -z "$ID_B" ]; then
+    fail "T5 setup — get instance IDs" "A='$ID_A' B='$ID_B'"
+else
+    # T5a: Send targeted sentinel to A — only A should receive
+    echo "for-A-only" > /tmp/${TEST_PREFIX_5}${ID_A}-crosstest
+    sleep 8
+
+    HITS_A=$(python3 -c "
+import json
+count = 0
+try:
+    with open('$SESSION_5A') as f:
+        for line in f:
+            msg = json.loads(line)
+            if 'for-A-only' in json.dumps(msg):
+                count += 1
+except: pass
+print(count)
+" 2>/dev/null)
+    HITS_B=$(python3 -c "
+import json
+count = 0
+try:
+    with open('$SESSION_5B') as f:
+        for line in f:
+            msg = json.loads(line)
+            if 'for-A-only' in json.dumps(msg):
+                count += 1
+except: pass
+print(count)
+" 2>/dev/null)
+
+    if [ "$HITS_A" -ge 1 ]; then
+        pass "T5a — targeted signal delivered to A"
+    else
+        fail "T5a — targeted signal delivered to A" "hits=$HITS_A"
+    fi
+    if [ "$HITS_B" = "0" ]; then
+        pass "T5a — targeted signal NOT delivered to B"
+    else
+        fail "T5a — targeted signal NOT delivered to B" "hits=$HITS_B"
+    fi
+
+    # T5b: Send broadcast sentinel — neither should receive
+    echo "broadcast-leak" > /tmp/${TEST_PREFIX_5}noinstance
+    sleep 8
+
+    if [ ! -f "/tmp/${TEST_PREFIX_5}noinstance" ]; then
+        pass "T5b — broadcast sentinel deleted"
+    else
+        fail "T5b — broadcast sentinel deleted" "file still exists"
+        rm -f "/tmp/${TEST_PREFIX_5}noinstance"
+    fi
+
+    LEAK_A=$(python3 -c "
+import json
+count = 0
+try:
+    with open('$SESSION_5A') as f:
+        for line in f:
+            msg = json.loads(line)
+            if 'broadcast-leak' in json.dumps(msg):
+                count += 1
+except: pass
+print(count)
+" 2>/dev/null)
+    LEAK_B=$(python3 -c "
+import json
+count = 0
+try:
+    with open('$SESSION_5B') as f:
+        for line in f:
+            msg = json.loads(line)
+            if 'broadcast-leak' in json.dumps(msg):
+                count += 1
+except: pass
+print(count)
+" 2>/dev/null)
+
+    if [ "$LEAK_A" = "0" ]; then
+        pass "T5b — broadcast not delivered to A"
+    else
+        fail "T5b — broadcast not delivered to A" "hits=$LEAK_A"
+    fi
+    if [ "$LEAK_B" = "0" ]; then
+        pass "T5b — broadcast not delivered to B"
+    else
+        fail "T5b — broadcast not delivered to B" "hits=$LEAK_B"
+    fi
+fi
+
+tmux send-keys -t "$TMUX_SESSION:inst-a" C-d 2>/dev/null || true
+tmux send-keys -t "$TMUX_SESSION:inst-b" C-d 2>/dev/null || true
 # ─── Results ──────────────────────────────────────────────────────────────
 
 echo ""

@@ -10,8 +10,7 @@ the task finishes — no sleeping, no polling, no `tmux capture-pane` loops.
 - Either way, the notification appears in your message history and you respond to it
 ```bash
 # Launch with sentinel (you'll be woken up when it finishes)
-tmux send-keys -t eval:land 'cd ~/Documents/GitHub/ypi && rp ypi .prose/land.prose; echo done > /tmp/ypi-signal-land' Enter
-
+tmux send-keys -t eval:land "cd ~/Documents/GitHub/ypi && rp ypi .prose/land.prose; echo done > /tmp/ypi-signal-${YPI_INSTANCE_ID}-land" Enter
 # That's it. Keep working on other things. You'll get a message like:
 #   ⚡ Background task "land" completed: done
 # ...and a new turn is triggered so you can respond to it.
@@ -20,9 +19,10 @@ tmux send-keys -t eval:land 'cd ~/Documents/GitHub/ypi && rp ypi .prose/land.pro
 Do not `sleep && tmux capture-pane` in a loop. Do not check progress unless
 asked. Just keep working — the extension will interrupt you when it's ready.
 
-**Sentinel naming:** `/tmp/ypi-signal-{name}` — the `{name}` part appears in
-the notification. File contents become the notification body. The file is
-deleted after consumption.
+**Sentinel naming:** `/tmp/ypi-signal-${YPI_INSTANCE_ID}-{name}` — always include
+`$YPI_INSTANCE_ID` so the signal reaches THIS instance, not a sibling. The `{name}`
+part appears in the notification. File contents become the notification body.
+The file is deleted after consumption.
 **Key programs:**
 - `rp ypi .prose/land.prose` — "land it" / "land the plane": tests, push, handoff
 - `rp ypi .prose/release.prose confirm_release='Approved.'` — cut an npm release

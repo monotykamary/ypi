@@ -12,3 +12,9 @@
 		"version": "3.11.0"
 	}
 }
+12→ encrypt ✓
+13→ commit+tag+push ✓
+14→ publish ✓
+15→ decrypt ✓
+16→ jj new ✓
+---end 2026-02-15T06:51:30Z

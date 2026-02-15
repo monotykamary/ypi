@@ -28,7 +28,7 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { execFile } from "child_process";
+import { execFile, spawn } from "child_process";
 
 interface TitleState {
   turnsSinceUpdate: number;
@@ -40,13 +40,7 @@ interface TitleState {
   timer: ReturnType<typeof setInterval> | undefined;
 }
 
-const SUMMARY_PROMPT = `Look at this conversation and write a SHORT title (5-10 words max) describing what the user is currently working on. Examples of good titles:
-- "refactoring auth middleware"
-- "debugging flaky E2E tests"
-- "adding cachebro extension"
-- "reviewing PR #142 feedback"
-
-Reply with ONLY the title, nothing else. No quotes, no punctuation at the end, no explanation.`;
+const SUMMARY_PROMPT = 'Write a 5-10 word title describing what this session is working on. Reply with ONLY the title. No quotes, no punctuation, no explanation.';
 
 export default function autoTitle(pi: ExtensionAPI) {
   if (process.env.AUTO_TITLE_DISABLE === "1") return;
@@ -55,7 +49,7 @@ export default function autoTitle(pi: ExtensionAPI) {
   const turnsThreshold = parseInt(process.env.AUTO_TITLE_TURNS || "5", 10);
   const initialTurns = parseInt(process.env.AUTO_TITLE_INITIAL_TURNS || "2", 10);
   const prefix = process.env.AUTO_TITLE_PREFIX || "π";
-  const model = process.env.AUTO_TITLE_MODEL;
+  const model = process.env.AUTO_TITLE_MODEL || "claude-sonnet-4-20250514";
   const provider = process.env.AUTO_TITLE_PROVIDER;
 
   const state: TitleState = {
@@ -76,6 +70,7 @@ export default function autoTitle(pi: ExtensionAPI) {
     // Also set tmux window name if we're in tmux
     if (process.env.TMUX) {
       try {
+        execFile("tmux", ["set-option", "-w", "automatic-rename", "off"], { timeout: 2000 }, () => {});
         execFile("tmux", ["rename-window", title], { timeout: 2000 }, () => {});
       } catch {
         // not in tmux or tmux not available
@@ -92,33 +87,49 @@ export default function autoTitle(pi: ExtensionAPI) {
     if (model) args.push("--model", model);
     if (provider) args.push("--provider", provider);
     args.push(SUMMARY_PROMPT);
+    const debugFile = process.env.AUTO_TITLE_DEBUG;
 
-    const child = execFile("pi", args, {
-      timeout: 30000,
-      maxBuffer: 1024 * 10,
+    const child = spawn("pi", args, {
+      stdio: ["pipe", "pipe", "pipe"],
       env: { ...process.env },
-    }, (err, stdout, _stderr) => {
+    });
+
+    // Close stdin immediately — pi -p reads args, not stdin
+    child.stdin.end();
+
+    let stdout = "";
+    child.stdout.on("data", (data: Buffer) => { stdout += data.toString(); });
+
+    // Kill if it takes too long
+    const killTimer = setTimeout(() => { child.kill(); }, 30000);
+    if (killTimer.unref) killTimer.unref();
+
+    child.on("close", (code: number | null) => {
+      clearTimeout(killTimer);
       state.pendingUpdate = false;
+      if (debugFile) {
+        const fs = require("fs");
+        fs.appendFileSync(debugFile, `[auto-title] code=${code} stdout='${stdout.trim()}'\n`);
+      }
 
-      if (err || !stdout?.trim()) return;
-
+      if (code !== 0 || !stdout.trim()) return;
       // Clean up the response — take first line, strip quotes/periods
       let title = stdout.trim().split("\n")[0]
         .replace(/^["']|["']$/g, "")
         .replace(/\.+$/, "")
         .trim()
         .toLowerCase();
-
       // Sanity check — should be short
       if (title.length > 60) title = title.slice(0, 57) + "...";
       if (title.length < 3) return;
-
+      if (debugFile) {
+        const fs = require("fs");
+        fs.appendFileSync(debugFile, `[auto-title] setting title='${title}'\n`);
+      }
       state.lastUpdateTime = Date.now();
       state.turnsSinceUpdate = 0;
-
       setTitle(title, ctx);
     });
-
     // Don't keep the process alive waiting for this
     child.unref();
   }
