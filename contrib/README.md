@@ -8,11 +8,14 @@ for both interactive sessions and rlm_query children.
 
 ## Extensions
 
-These are Pi extensions we find useful alongside ypi. Install any you like
-by symlinking into your Pi extensions directory:
-
+These are Pi extensions we find useful alongside ypi. Install single-file
+extensions by symlinking, directory extensions by copying:
 ```bash
+# Single-file extension (symlink)
 ln -s "$(pwd)/contrib/extensions/hashline.ts" ~/.pi/agent/extensions/hashline.ts
+# Directory extension with npm deps (copy + install)
+cp -r contrib/extensions/lsp ~/.pi/agent/extensions/lsp
+cd ~/.pi/agent/extensions/lsp && npm install
 ```
 
 ### dirpack.ts
@@ -53,6 +56,27 @@ Ported from [oh-my-pi](https://github.com/can1357/oh-my-pi) by can1357.
 ln -s "$(pwd)/contrib/extensions/hashline.ts" ~/.pi/agent/extensions/hashline.ts
 ```
 
+### lsp/
+
+Compiler-grade code intelligence via Language Server Protocol. Registers an
+`lsp` tool that the LLM can call for diagnostics, go-to-definition,
+find-references, rename, hover, symbols, code actions, and more.
+Auto-detects language servers (rust-analyzer, typescript-language-server,
+gopls, pylsp, zls, clangd, lua-language-server) based on project markers.
+
+Ported from [oh-my-pi](https://github.com/can1357/oh-my-pi)'s `@oh-my-pi/lsp` plugin by can1357.
+
+This is a directory extension (has npm dependencies), so copy + install:
+
+```bash
+cp -r contrib/extensions/lsp ~/.pi/agent/extensions/lsp
+cd ~/.pi/agent/extensions/lsp && npm install
+```
+
+Requires at least one language server on PATH. The extension is **depth-aware**:
+it only registers at `RLM_DEPTH=0`, so recursive children skip it (no wasted
+tokens, no server spawns).
+
 ### treemap.ts
 
 Appends a repository tree overview to the system prompt so the agent always
@@ -75,8 +99,9 @@ Configuration:
 
 ## Uninstalling
 
-Remove the symlink from `~/.pi/agent/extensions/`:
-
+Remove the symlink or directory from `~/.pi/agent/extensions/`:
 ```bash
 rm ~/.pi/agent/extensions/<extension>.ts
+# or for directory extensions:
+rm -r ~/.pi/agent/extensions/lsp/
 ```

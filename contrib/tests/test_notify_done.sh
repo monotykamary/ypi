@@ -305,6 +305,137 @@ fi
 
 tmux send-keys -t "$TMUX_SESSION:multi" "/exit" Enter 2>/dev/null || true
 
+# ─── Instance ID & Broadcast Blocking ─────────────────────────────────────
+# These tests use a SELF-CONTAINED extension with the real instance ID logic
+# but a unique signal prefix, so other running instances can't interfere.
+
+echo "--- T4: Broadcast sentinel blocked ---"
+
+# Generate a test extension that has instance ID filtering + unique prefix
+TEST_EXT_4=$(mktemp /tmp/ndtest_ext4_XXXXXX.ts)
+CLEANUP_FILES+=("$TEST_EXT_4")
+TEST_PREFIX_4="ndtest4-${TEST_ID}-"
+
+cat > "$TEST_EXT_4" << EXT4EOF
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { readFileSync, readdirSync, unlinkSync, writeFileSync } from "fs";
+import { randomBytes } from "crypto";
+
+const SIGNAL_DIR = "/tmp";
+const SIGNAL_PREFIX = "${TEST_PREFIX_4}";
+const POLL_INTERVAL = 2000;
+
+export default function (pi: ExtensionAPI) {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const instanceId = randomBytes(4).toString("hex");
+    process.env.YPI_INSTANCE_ID = instanceId;
+
+    // Write instance ID to a known file so the test can read it
+    writeFileSync("/tmp/ndtest4-instance-${TEST_ID}.txt", instanceId);
+
+    pi.on("session_start", async () => {
+        timer = setInterval(() => {
+            try {
+                const files = readdirSync(SIGNAL_DIR).filter((f) => f.startsWith(SIGNAL_PREFIX));
+                for (const file of files) {
+                    const rest = file.slice(SIGNAL_PREFIX.length);
+                    const instanceMatch = rest.match(/^([0-9a-f]{8})-(.+)\$/);
+                    if (instanceMatch) {
+                        const [, targetId, name] = instanceMatch;
+                        if (targetId !== instanceId) continue;
+                        try {
+                            const content = readFileSync(\`\${SIGNAL_DIR}/\${file}\`, "utf-8").trim();
+                            unlinkSync(\`\${SIGNAL_DIR}/\${file}\`);
+                            pi.sendMessage(
+                                { customType: "notify-done", content: \`NOTIFY[\${name}]: \${content}\`, display: true },
+                                { triggerTurn: true },
+                            );
+                        } catch {}
+                    } else {
+                        // Broadcast — block and delete
+                        try { unlinkSync(\`\${SIGNAL_DIR}/\${file}\`); } catch {}
+                    }
+                }
+            } catch {}
+        }, POLL_INTERVAL);
+    });
+
+    pi.on("session_shutdown", async () => {
+        if (timer) { clearInterval(timer); timer = null; }
+    });
+}
+EXT4EOF
+SESSION_4=$(mktemp /tmp/ndtest_session_XXXXXX.jsonl)
+CLEANUP_FILES+=("$SESSION_4" "/tmp/ndtest4-instance-${TEST_ID}.txt")
+tmux new-window -t "$TMUX_SESSION" -n broadcast
+tmux send-keys -t "$TMUX_SESSION:broadcast" "pi -e $TEST_EXT_4 --no-extensions --session $SESSION_4" Enter
+sleep 8
+# Send a message so the session is alive
+tmux send-keys -t "$TMUX_SESSION:broadcast" 'Say ok' Enter
+sleep 8
+# Drop a broadcast sentinel (no instance ID) — should be BLOCKED
+echo "should-not-arrive" > /tmp/${TEST_PREFIX_4}broadcast
+sleep 8
+# Check the sentinel was deleted (cleanup)
+if [ ! -f "/tmp/${TEST_PREFIX_4}broadcast" ]; then
+    pass "broadcast — sentinel deleted"
+else
+    fail "broadcast — sentinel deleted" "file still exists"
+    rm -f "/tmp/${TEST_PREFIX_4}broadcast"
+fi
+# Verify the notification was NOT delivered to the session
+BROADCAST_HITS=$(python3 -c "
+import json
+count = 0
+try:
+    with open('$SESSION_4') as f:
+        for line in f:
+            msg = json.loads(line)
+            if msg.get('customType') == 'notify-done':
+                if 'should-not-arrive' in str(msg):
+                    count += 1
+except: pass
+print(count)
+" 2>/dev/null)
+if [ "$BROADCAST_HITS" = "0" ]; then
+    pass "broadcast — notification not delivered"
+else
+    fail "broadcast — notification not delivered" "found $BROADCAST_HITS notifications"
+fi
+# Now test that a TARGETED sentinel DOES get delivered
+INSTANCE_ID=$(cat /tmp/ndtest4-instance-${TEST_ID}.txt 2>/dev/null)
+if [ -n "$INSTANCE_ID" ] && [ "${#INSTANCE_ID}" = "8" ]; then
+    echo "targeted-ok" > /tmp/${TEST_PREFIX_4}${INSTANCE_ID}-targeted
+    sleep 8
+
+    if [ ! -f "/tmp/${TEST_PREFIX_4}${INSTANCE_ID}-targeted" ]; then
+        pass "targeted — sentinel consumed"
+    else
+        fail "targeted — sentinel consumed" "file still exists"
+        rm -f "/tmp/${TEST_PREFIX_4}${INSTANCE_ID}-targeted"
+    fi
+    TARGETED_HITS=$(python3 -c "
+import json
+count = 0
+try:
+    with open('$SESSION_4') as f:
+        for line in f:
+            msg = json.loads(line)
+            if msg.get('customType') == 'notify-done':
+                if 'targeted-ok' in str(msg):
+                    count += 1
+except: pass
+print(count)
+" 2>/dev/null)
+    if [ "$TARGETED_HITS" -ge 1 ]; then
+        pass "targeted — notification delivered"
+    else
+        fail "targeted — notification delivered" "not found in session"
+    fi
+else
+    fail "targeted — get instance ID" "could not read instance ID file"
+fi
+tmux send-keys -t "$TMUX_SESSION:broadcast" C-d 2>/dev/null || true
 # ─── Results ──────────────────────────────────────────────────────────────
 
 echo ""
