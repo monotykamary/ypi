@@ -576,7 +576,7 @@ function forkPeerSession(
 				].join("\n");
 				args.push(workerPreamble);
 
-				const child = spawn("pi", args, {
+				const child = spawn(SPAWN_BINARY, args, {
 					cwd: peer.cwd,
 					detached: true,
 					stdio: "ignore",
@@ -624,6 +624,7 @@ function forkPeerSession(
 
 const PEERS_DIR = "/tmp/ypi-peers";
 const INBOX_SUFFIX = ".inbox.jsonl";
+const SPAWN_BINARY = process.env.RLM_SYSTEM_PROMPT ? "ypi" : "pi";
 
 /** Registration entry — what each agent writes to the registry */
 interface PeerRegistration {
@@ -1118,7 +1119,7 @@ export default function findTheOthers(pi: ExtensionAPI) {
 				if (params.provider) args.unshift("--provider", params.provider);
 				if (params.model) args.unshift("--model", params.model);
 
-				const child = spawn("pi", args, {
+				const child = spawn(SPAWN_BINARY, args, {
 					cwd: childCwd,
 					detached: true,
 					stdio: "ignore",
