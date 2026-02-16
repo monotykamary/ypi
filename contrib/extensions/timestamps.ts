@@ -1,9 +1,11 @@
 /**
- * timestamps — gives agents awareness of time.
+ * timestamps — Give agents time awareness.
  *
- * Status bar shows current time, session uptime, and turn duration.
- * `clock` tool returns structured time info on demand.
+ * Agents have no built-in clock. This extension injects the current time
+ * into every turn, tracks session uptime and turn duration, and registers
+ * a `clock` tool for on-demand time queries.
  */
+
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 function fmt(ms: number): string {
@@ -15,54 +17,53 @@ function fmt(ms: number): string {
 	return `${h}h${String(m % 60).padStart(2, "0")}m`;
 }
 
-function timeStr(): string {
-	return new Date().toLocaleTimeString("en-US", {
-		hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit",
-		timeZoneName: "short",
-	});
-}
+function now() { return new Date(); }
+function iso(d: Date) { return d.toISOString(); }
+function human(d: Date) { return d.toLocaleTimeString("en-US", { hour12: false, timeZoneName: "short" }); }
 
 export default function timestamps(pi: ExtensionAPI) {
-	let sessionStart = Date.now();
-	let turnStart = Date.now();
-	let lastTurnEnd = Date.now();
+	const sessionStart = now();
+	let turnStart = now();
+	let lastTurnEnd = sessionStart;
 
-	function updateStatus(ctx: { ui: { setStatus(k: string, v: string): void } }) {
-		const now = Date.now();
-		ctx.ui.setStatus("⏱", `${timeStr()} | session: ${fmt(now - sessionStart)} | turn: ${fmt(now - turnStart)}`);
-	}
-
-	pi.on("session_start", async (_event, ctx) => {
-		sessionStart = Date.now();
-		turnStart = sessionStart;
-		lastTurnEnd = sessionStart;
-		ctx.ui.setStatus("⏱", `${timeStr()} | session start`);
+	pi.on("session_start", async (_ev, ctx) => {
+		const t = now();
+		const tz = t.toLocaleString("en-US", { timeZoneName: "long" }).split(", ").pop() || "";
+		pi.sendMessage({
+			customType: "timestamp",
+			content: `Current date and time: ${t.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} at ${human(t)}\nTimezone: ${tz}`,
+			display: "inline",
+		});
 	});
 
-	pi.on("before_agent_start", async (_event, _ctx) => {
-		turnStart = Date.now();
+	pi.on("before_agent_start", async () => { turnStart = now(); });
+
+	pi.on("agent_end", async (_ev, ctx) => {
+		const t = now();
+		const uptime = fmt(t.getTime() - sessionStart.getTime());
+		const turn = fmt(t.getTime() - turnStart.getTime());
+		ctx.ui.setStatus("time", `⏱ ${human(t)} | session: ${uptime} | turn: ${turn}`);
+		lastTurnEnd = t;
 	});
 
-	pi.on("agent_end", async (_event, ctx) => {
-		lastTurnEnd = Date.now();
-		updateStatus(ctx);
-	});
-
+	const { Type } = require("@sinclair/typebox");
 	pi.registerTool({
 		name: "clock",
-		label: "Current time & session timing",
-		parameters: { type: "object", properties: {} },
+		label: "Current time",
+		description: "Returns current time, session uptime, and time since last turn. Use when you need to know what time it is.",
+		parameters: Type.Object({}),
 		execute: async () => {
-			const now = Date.now();
+			const t = now();
 			return {
-				result: JSON.stringify({
-					now_iso: new Date(now).toISOString(),
-					now_human: timeStr(),
-					session_start_iso: new Date(sessionStart).toISOString(),
-					session_uptime: fmt(now - sessionStart),
-					turn_started: fmt(now - turnStart) + " ago",
-					last_turn_ended: fmt(now - lastTurnEnd) + " ago",
-				}, null, 2),
+				content: [{
+					type: "text" as const,
+					text: JSON.stringify({
+						current_time: iso(t),
+						human_time: human(t),
+						session_uptime: fmt(t.getTime() - sessionStart.getTime()),
+						since_last_turn: fmt(t.getTime() - lastTurnEnd.getTime()),
+					}, null, 2),
+				}],
 			};
 		},
 	});
