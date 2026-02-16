@@ -106,6 +106,12 @@ for var in $(env | grep '^RLM_' | cut -d= -f1); do unset "$var"; done
 # Disable JSON mode in unit tests — mock pi doesn't output JSON
 export RLM_JSON=0
 
+# Debug: verify mock pi is first in PATH and RLM_JSON is set
+echo "DEBUG: which pi=$(which pi)"
+echo "DEBUG: which rlm_query=$(which rlm_query)"
+echo "DEBUG: RLM_JSON=$RLM_JSON"
+echo "DEBUG: PATH=$PATH" | head -c 200
+
 # Temp dir for test artifacts
 TEST_TMP=$(mktemp -d /tmp/rlm_test_XXXXXX)
 trap 'rm -rf "$TEST_TMP" "$MOCK_BIN"' EXIT
@@ -132,6 +138,8 @@ OUTPUT=$(
     RLM_SYSTEM_PROMPT="$PROJECT_DIR/SYSTEM_PROMPT.md" \
     rlm_query "What university?"
 )
+echo "DEBUG T2 OUTPUT: $OUTPUT"
+echo "DEBUG T2 ctx.txt contents: $(cat $TEST_TMP/ctx.txt)"
 assert_contains "T2: mock pi called" "MOCK_PI_CALLED" "$OUTPUT"
 assert_contains "T2: depth incremented" "RLM_DEPTH=1" "$OUTPUT"
 assert_contains "T2: provider propagated" "RLM_PROVIDER=test-provider" "$OUTPUT"
