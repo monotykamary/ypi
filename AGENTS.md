@@ -113,6 +113,9 @@ ypi/
 ├── scripts/
 │   ├── check-upstream     # Test ypi against latest pi release
 │   ├── pre-push-checks    # Shared local/CI test gate (fast + extensions)
+│   ├── release-preflight  # One-command hooks + checks + upstream dry-run
+│   ├── ci-status          # Show recent GitHub Actions runs
+│   ├── ci-last-failure    # Print latest failed run logs
 │   ├── install-hooks      # Configure core.hooksPath and chmod hook scripts
 │   ├── encrypt-prose      # Encrypt .prose/runs/ and .prose/agents/ before push
 │   └── decrypt-prose      # Decrypt after clone/pull (symlink to encrypt-prose)
@@ -166,11 +169,22 @@ make test-e2e           # real LLM calls (minutes, costs money)
 ```bash
 make pre-push-checks       # same gate used by CI
 ```
+
+For release/upstream work, use one command:
+```bash
+make release-preflight
+```
 Install local hooks once per clone:
 ```bash
 make install-hooks
 ```
 This sets `core.hooksPath=.githooks` so `pre-push` runs automatically.
+
+CI helpers:
+```bash
+make ci-status N=15
+make ci-last-failure
+```
 
 ### The recursive test:
 After modifying rlm_query, verify YOU still work:

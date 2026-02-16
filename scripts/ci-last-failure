@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# ci-last-failure — print log for the most recent failed GH Actions run.
+
+set -euo pipefail
+
+if ! command -v gh >/dev/null 2>&1; then
+  echo "gh CLI not found" >&2
+  exit 1
+fi
+
+RUN_ID="${1:-}"
+if [ -z "$RUN_ID" ]; then
+  RUN_ID=$(gh run list --limit 30 --json databaseId,conclusion --jq '.[] | select(.conclusion != "success") | .databaseId' | head -1)
+fi
+
+if [ -z "$RUN_ID" ]; then
+  echo "No recent failed runs found."
+  exit 0
+fi
+
+echo "==> showing logs for run $RUN_ID"
+gh run view "$RUN_ID" --log

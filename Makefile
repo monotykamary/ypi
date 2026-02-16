@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-guardrails test-extensions test-e2e test-fast pre-push-checks check-upstream install-hooks clean
+.PHONY: test test-unit test-guardrails test-extensions test-e2e test-fast pre-push-checks check-upstream install-hooks release-preflight ci-status ci-last-failure clean
 
 # Fast tests — no LLM calls, uses mock pi
 test-unit:
@@ -38,6 +38,19 @@ check-upstream:
 # Install repo hooks (.githooks/*)
 install-hooks:
 	@scripts/install-hooks
+
+# One-command release preflight (hooks + tests + upstream dry-run)
+release-preflight:
+	@scripts/release-preflight
+
+# CI helper: show recent runs (usage: make ci-status [N])
+ci-status:
+	@scripts/ci-status $(or $(N),10)
+
+# CI helper: dump latest failed run log (or pass RUN=<id>)
+ci-last-failure:
+	@scripts/ci-last-failure $(RUN)
+
 
 
 # Clean up temp files

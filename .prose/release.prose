@@ -15,20 +15,17 @@ let diff = exec "jj diff --from 'description(\"release:\")' --stat"
 
 # --- Tests ---
 
-let pre_push_checks = exec "make pre-push-checks"
+let preflight = exec "make release-preflight"
   on-fail: "continue"
-
-if **pre-push checks failed**:
+if **release preflight failed**:
   session "Report test failures and stop"
     prompt: """
-      Pre-push checks failed. Cannot release.
-
+      Release preflight failed. Cannot release.
       Output:
-      {pre_push_checks}
-
+      {preflight}
       Diagnose what's broken and propose the smallest safe fix.
     """
-  throw "Pre-push checks failed"
+  throw "Release preflight failed"
 
 # --- Decide version ---
 

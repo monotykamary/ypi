@@ -11,9 +11,7 @@ We use [semver](https://semver.org/):
 
 ### 1. Run release preflight checks
 ```bash
-make install-hooks      # once per clone
-make pre-push-checks    # same gate CI uses
-make check-upstream     # verify latest pi compatibility
+make release-preflight   # hooks + shared checks + upstream dry-run
 ```
 
 ### 2. Update version in package.json

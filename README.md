@@ -185,7 +185,18 @@ Install hooks once per clone to run checks automatically on git push:
 make install-hooks
 ```
 
+Release/update helper:
+```bash
+make release-preflight   # same checks + upstream dry-run in one command
+```
+
 **Before any change to `rlm_query`:** run `make test-fast`. After: run it again. `rlm_query` is a live dependency of the agent's own execution — breaking it breaks the agent.
+
+CI helper commands:
+```bash
+make ci-status N=15      # recent workflow runs
+make ci-last-failure     # dump latest failing workflow log
+```
 
 
 ### History
