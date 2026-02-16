@@ -94,6 +94,7 @@ fi
 # We append to the combined prompt file rather than passing through,
 # since pi already gets --system-prompt from us.
 PASS_ARGS=()
+QUIET="${YPI_QUIET:-0}"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --append-system-prompt)
@@ -101,9 +102,13 @@ while [[ $# -gt 0 ]]; do
             printf '\n%s\n' "$1" >> "$COMBINED_PROMPT"
             shift
             ;;
+        --quiet|-q)
+            QUIET=1
+            shift
+            ;;
         --system-prompt)
             # User overriding ypi's system prompt entirely
-            echo "⚠️  Overriding ypi's system prompt. Did you mean --append-system-prompt?" >&2
+            [ "$QUIET" != "1" ] && echo "⚠️  Overriding ypi's system prompt. Did you mean --append-system-prompt?" >&2
             shift
             cat "$1" > "$COMBINED_PROMPT" 2>/dev/null || echo "$1" > "$COMBINED_PROMPT"
             shift
