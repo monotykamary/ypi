@@ -35,8 +35,10 @@ echo ""
 
 # --- 1. Temp files ---
 FILES=$(find /tmp -maxdepth 1 -name 'rlm_*' ! -type d -mmin +"$AGE_MIN" 2>/dev/null || true)
-FILE_COUNT=$(echo "$FILES" | grep -c . 2>/dev/null || echo 0)
-FILE_SIZE=$(echo "$FILES" | xargs du -ch 2>/dev/null | tail -1 | cut -f1 || echo "0")
+FILE_COUNT=0
+[ -n "$FILES" ] && FILE_COUNT=$(echo "$FILES" | wc -l)
+FILE_SIZE="0"
+[ -n "$FILES" ] && FILE_SIZE=$(echo "$FILES" | xargs du -ch 2>/dev/null | tail -1 | cut -f1 || echo "0")
 
 echo "Temp files older than ${AGE_MIN}m: $FILE_COUNT ($FILE_SIZE)"
 if [ "$FILE_COUNT" -gt 0 ]; then
@@ -50,8 +52,10 @@ fi
 
 # --- 2. Workspace directories ---
 WS_DIRS=$(find /tmp -maxdepth 1 -name 'rlm_ws_*' -type d -mmin +"$AGE_MIN" 2>/dev/null || true)
-WS_COUNT=$(echo "$WS_DIRS" | grep -c . 2>/dev/null || echo 0)
-WS_SIZE=$(echo "$WS_DIRS" | xargs du -csh 2>/dev/null | tail -1 | cut -f1 || echo "0")
+WS_COUNT=0
+[ -n "$WS_DIRS" ] && WS_COUNT=$(echo "$WS_DIRS" | wc -l)
+WS_SIZE="0"
+[ -n "$WS_DIRS" ] && WS_SIZE=$(echo "$WS_DIRS" | xargs du -csh 2>/dev/null | tail -1 | cut -f1 || echo "0")
 
 echo "Workspace dirs older than ${AGE_MIN}m: $WS_COUNT ($WS_SIZE)"
 if [ "$WS_COUNT" -gt 0 ]; then
