@@ -9,6 +9,8 @@
 #   echo "some text" | rlm_query "What is the main topic?"
 #   sed -n '100,200p' "$CONTEXT" | rlm_query "Summarize this section"
 #   rlm_query --fork "Continue working on this refactor"
+#   rlm_query --async "Analyze the codebase"   # returns immediately with job JSON
+#   echo "data" | rlm_query --async --notify $$ "Summarize this"
 #
 # If stdin has data (piped), that becomes the child's context.
 # Otherwise, the child inherits the parent's $CONTEXT file.
@@ -16,6 +18,9 @@
 # Flags:
 #   --fork             Fork parent session into child (carries conversation history)
 #                      Default: fresh session per child (only data context, no history)
+#   --async            Spawn child in background, return immediately with job JSON
+#                      Output goes to a temp file; sentinel touched when done
+#   --notify PID       With --async: write result to target PID's peer inbox when done
 #
 # Environment:
 #   RLM_DEPTH         — current recursion depth (default: 0)
@@ -50,14 +55,18 @@ rlm_error() { echo "✗ $1" >&2; [ -n "${2:-}" ] && echo "  Why: $2" >&2; [ -n "
 # Parse flags
 # ----------------------------------------------------------------------
 FORK=false
+ASYNC=false
+NOTIFY_PID=""
 while [[ "${1:-}" == --* ]]; do
     case "$1" in
         --fork) FORK=true; shift ;;
+        --async) ASYNC=true; shift ;;
+        --notify) NOTIFY_PID="$2"; shift 2 ;;
         *) break ;;
     esac
 done
 
-PROMPT="${1:?Usage: rlm_query [--fork] \"your prompt here\"}"
+PROMPT="${1:?Usage: rlm_query [--fork] [--async] [--notify PID] \"your prompt here\"}"
 
 # ----------------------------------------------------------------------
 # Depth guard — refuse to go beyond max depth
@@ -174,6 +183,8 @@ if [ "${RLM_JJ:-1}" != "0" ] \
 fi
 
 # Cleanup: remove temp context + forget jj workspace (updated in run section below)
+# In async mode, the child needs these files — skip cleanup (child cleans up after itself)
+if [ "$ASYNC" != true ]; then
 trap '{
     rm -f "$CHILD_CONTEXT" "$PROMPT_FILE"
     rm -f "${COMBINED_PROMPT:-}"
@@ -181,6 +192,7 @@ trap '{
         jj workspace forget "$JJ_WS_NAME" 2>/dev/null || true
     fi
 }' EXIT
+fi
 trap 'rlm_error "Interrupted" "Received signal" "Re-run the command"; exit 130' INT TERM
 
 # ----------------------------------------------------------------------
@@ -299,6 +311,55 @@ fi
 # Enter jj workspace if available (child gets isolated working copy)
 if [ -n "$JJ_WORKSPACE" ]; then
     cd "$JJ_WORKSPACE"
+fi
+
+# ----------------------------------------------------------------------
+# Async mode — spawn child in background and return immediately
+# ----------------------------------------------------------------------
+if [ "$ASYNC" = true ]; then
+    ASYNC_ID="rlm_async_${RLM_TRACE_ID}_c${RLM_CALL_COUNT}_$(head -c 4 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+    ASYNC_OUTPUT="/tmp/${ASYNC_ID}.txt"
+    ASYNC_SENTINEL="/tmp/${ASYNC_ID}.done"
+
+    # Build the full command
+    CHILD_CMD=(pi "${CMD_ARGS[@]}" "$PROMPT")
+    if [ -n "$TIMEOUT_CMD" ]; then
+        CHILD_CMD=($TIMEOUT_CMD "${CHILD_CMD[@]}")
+    fi
+
+    # Spawn in background: run child, capture output, touch sentinel, optionally notify
+    (
+        "${CHILD_CMD[@]}" > "$ASYNC_OUTPUT" 2>&1
+        touch "$ASYNC_SENTINEL"
+
+        # If --notify PID was given, write to that peer's inbox
+        if [ -n "$NOTIFY_PID" ]; then
+            INBOX_DIR=$(find /tmp/pi_peer_* -maxdepth 0 -type d 2>/dev/null | while read d; do
+                if [ -f "$d/meta.json" ] && grep -q "\"pid\":$NOTIFY_PID" "$d/meta.json" 2>/dev/null; then
+                    echo "$d"; break
+                fi
+            done)
+            if [ -n "$INBOX_DIR" ] && [ -d "$INBOX_DIR" ]; then
+                RESULT=$(cat "$ASYNC_OUTPUT" | tail -c 50000)
+                MSG=$(cat <<MSGJSON
+{"from_pid":$$,"from_project":"rlm_query","message":"[rlm_query --async result]\n\n$RESULT","timestamp":"$(date -Iseconds)","id":"async_${ASYNC_ID}"}
+MSGJSON
+)
+                echo "$MSG" >> "$INBOX_DIR/inbox.jsonl"
+            fi
+        fi
+
+        # Clean up temp files the parent skipped
+        rm -f "$CHILD_CONTEXT" "$PROMPT_FILE" "${COMBINED_PROMPT:-}"
+    ) &
+    ASYNC_PID=$!
+    disown $ASYNC_PID 2>/dev/null || true
+
+    # Return job metadata immediately
+    cat <<EOF
+{"job_id": "$ASYNC_ID", "output": "$ASYNC_OUTPUT", "sentinel": "$ASYNC_SENTINEL", "pid": $ASYNC_PID}
+EOF
+    exit 0
 fi
 
 # ----------------------------------------------------------------------
