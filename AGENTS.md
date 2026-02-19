@@ -114,6 +114,7 @@ ypi/
 │   ├── check-upstream     # Test ypi against latest pi release
 │   ├── pre-push-checks    # Shared local/CI test gate (fast + extensions)
 │   ├── release-preflight  # One-command hooks + checks + upstream dry-run
+│   ├── land               # Deterministic-ish landing helper
 │   ├── ci-status          # Show recent GitHub Actions runs
 │   ├── ci-last-failure    # Print latest failed run logs
 │   ├── install-hooks      # Configure core.hooksPath and chmod hook scripts
@@ -173,6 +174,7 @@ make pre-push-checks       # same gate used by CI
 For release/upstream work, use one command:
 ```bash
 make release-preflight
+make land
 ```
 Install local hooks once per clone:
 ```bash

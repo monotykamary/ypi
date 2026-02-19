@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# land — deterministic-ish landing helper
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+AGENT_CHECK=true
+DRY_RUN=false
+
+while [[ "${1:-}" == --* ]]; do
+  case "$1" in
+    --no-agent-check) AGENT_CHECK=false; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
+    *) echo "Unknown flag: $1" >&2; exit 1 ;;
+  esac
+done
+
+echo "==> step 1/5: release preflight"
+./scripts/release-preflight
+
+echo "==> step 2/5: check encryption"
+./scripts/encrypt-prose --check
+
+if [ "$DRY_RUN" = true ]; then
+  echo "✅ dry-run complete (preflight + encryption check passed)"
+  exit 0
+fi
+
+echo "==> step 3/5: push master"
+jj bookmark set master -r @-
+jj git push
+
+echo "==> step 4/5: show CI status"
+./scripts/ci-status 5
+
+if [ "$AGENT_CHECK" = true ] && command -v ypi >/dev/null 2>&1; then
+  echo "==> step 5/5: agent audit"
+  SNAP=$(mktemp /tmp/ypi_land_audit_XXXXXX.txt)
+  trap 'rm -f "$SNAP"' EXIT
+
+  {
+    echo "=== jj status ==="
+    jj status 2>&1
+    echo
+    echo "=== git status ==="
+    git status -sb 2>&1
+    echo
+    echo "=== recent ci ==="
+    ./scripts/ci-status 8 2>&1
+  } > "$SNAP"
+
+  timeout 120s ypi -p --no-session "Given the provided context (jj status, git status, recent CI runs), return strict JSON: {\"land_ok\":true|false,\"reasons\":[...],\"next_actions\":[...]} . Mark land_ok=true only if working copy is clean and latest master CI is success." < "$SNAP" || {
+    echo "⚠️  agent audit failed or timed out (landing already pushed)."
+  }
+else
+  echo "==> step 5/5: agent audit skipped"
+fi
+
+echo "✅ land flow complete"

@@ -14,6 +14,11 @@ We use [semver](https://semver.org/):
 make release-preflight   # hooks + shared checks + upstream dry-run
 ```
 
+After preflight passes:
+```bash
+make land                # preflight + encryption check + push + CI status (+agent audit)
+```
+
 ### 2. Update version in package.json
 Edit `package.json` and set the new version. Don't use `npm version` — it
 calls git directly which conflicts with jj.

@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-guardrails test-extensions test-e2e test-fast pre-push-checks check-upstream install-hooks release-preflight ci-status ci-last-failure clean
+.PHONY: test test-unit test-guardrails test-extensions test-e2e test-fast pre-push-checks check-upstream install-hooks release-preflight land ci-status ci-last-failure clean
 
 # Fast tests — no LLM calls, uses mock pi
 test-unit:
@@ -42,6 +42,10 @@ install-hooks:
 # One-command release preflight (hooks + tests + upstream dry-run)
 release-preflight:
 	@scripts/release-preflight
+
+# Deterministic-ish land helper (preflight + encrypt-check + push + CI status + optional agent audit)
+land:
+	@scripts/land
 
 # CI helper: show recent runs (usage: make ci-status [N])
 ci-status:

@@ -56,15 +56,11 @@ session "Describe this change"
 
 let encrypt = exec "cd /home/raw/Documents/GitHub/ypi && bash scripts/encrypt-prose 2>&1 | tail -5"
 
-let push = exec """
-cd /home/raw/Documents/GitHub/ypi
-jj bookmark set master 2>&1
-jj git push 2>&1
-"""
+let land = exec "cd /home/raw/Documents/GitHub/ypi && make land -- --no-agent-check 2>&1"
 
-gate **push succeeded (no errors in output)**:
-  evidence: push
-  on-reject: throw "Push failed. Fix and retry."
+gate **land helper succeeded**:
+  evidence: land
+  on-reject: throw "Land helper failed. Fix and retry."
 
 let decrypt = exec "cd /home/raw/Documents/GitHub/ypi && bash scripts/decrypt-prose 2>&1 | tail -5"
 
