@@ -121,4 +121,4 @@ while [[ $# -gt 0 ]]; do
 done
 # Launch Pi with the combined system prompt, passing all args through
 # User's own extensions (hashline, etc.) are discovered automatically by Pi.
-exec pi --system-prompt "$COMBINED_PROMPT" "${YPI_EXT_ARGS[@]}" "${PASS_ARGS[@]}"
+exec pi --system-prompt "$COMBINED_PROMPT" ${YPI_EXT_ARGS[@]+"${YPI_EXT_ARGS[@]}"} ${PASS_ARGS[@]+"${PASS_ARGS[@]}"}

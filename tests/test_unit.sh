@@ -270,7 +270,7 @@ OUTPUT=$(
 )
 assert_file_exists "T10: trace file created" "$TRACE_FILE"
 TRACE_CONTENT=$(cat "$TRACE_FILE")
-assert_contains "T10: trace has depth" "depth=0→1" "$TRACE_CONTENT"
+assert_contains "T10: trace has depth" "depth=0->1" "$TRACE_CONTENT"
 assert_contains "T10: trace has prompt" "Traced question" "$TRACE_CONTENT"
 
 # T11: no trace file when PI_TRACE_FILE is unset
