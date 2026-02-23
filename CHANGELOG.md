@@ -1,7 +1,60 @@
 # Changelog
 
-All notable changes to ypi are documented here.
-Format based on [Keep a Changelog](https://keepachangelog.com/).
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### 0.5.1 (2026-02-23)
+
+
+### Features
+
+* --quiet flag to suppress system prompt override warning ([8bfe318](https://github.com/monotykamary/ypi/commit/8bfe318db9972744b65a1f096517e92f82c097d0))
+* add CHANGELOG.md, RELEASING.md, update .npmignore and package.json ([370e537](https://github.com/monotykamary/ypi/commit/370e537a3afebb68d5e60353d11e86b7438b435e))
+* add check-upstream.prose — upstream compat check as OpenProse program ([81eb915](https://github.com/monotykamary/ypi/commit/81eb915795d3b425d7acee62af4142679f7c66c4))
+* add context window awareness to SYSTEM_PROMPT.md ([528ea7e](https://github.com/monotykamary/ypi/commit/528ea7ec1c21698a284931eeddced6ff9aa97132)), closes [#1](https://github.com/monotykamary/ypi/issues/1)
+* add fresh_peer tool — lightweight spawn without conversation history ([66ef935](https://github.com/monotykamary/ypi/commit/66ef93566d651e6e110b862a742612951941e350))
+* add LSP extension to contrib ([c993899](https://github.com/monotykamary/ypi/commit/c993899beac410e0260791b61ed3690fd195cd9f))
+* add make land helper with optional agent audit ([93d2f6c](https://github.com/monotykamary/ypi/commit/93d2f6c77ba01c8890361cbc1c7a29dc3775ff1b))
+* add notify-done extension, update AGENTS.md with sentinel pattern for prose programs ([5b159aa](https://github.com/monotykamary/ypi/commit/5b159aa10140b3ae1e9f6d2208ce0c4889d5ce94))
+* add one-command release preflight and CI helper chores ([341a7ca](https://github.com/monotykamary/ypi/commit/341a7caed96b0a52bcea1b5e54532d7bf4ee9b2b))
+* add package.json, LICENSE, .npmignore for npm publish ([a11a156](https://github.com/monotykamary/ypi/commit/a11a156dacecde4c982f6ec24862a0669b6e8688))
+* add release.prose — automated release workflow ([6382b1c](https://github.com/monotykamary/ypi/commit/6382b1c518dad8b6168d52debc8bba540d57f3af))
+* add timeout, max calls, model routing, cleanup to rlm_query ([0565846](https://github.com/monotykamary/ypi/commit/0565846c7a8db898c79bab5485b84000516e3072))
+* configurable extensions in children, clean up README ([0d4772a](https://github.com/monotykamary/ypi/commit/0d4772a5a174be37831615cc3b2c674afac9e193))
+* cost tracking and budget enforcement via JSON mode ([e00bee6](https://github.com/monotykamary/ypi/commit/e00bee6e678ef1abf1da03d44310d7185a0d3cfc))
+* embed rlm_query source in system prompt ([7d149ff](https://github.com/monotykamary/ypi/commit/7d149ff9b9f451681c8ac0155f9eaf7d2cbaf788))
+* find-the-others extension — discover all active pi/ypi instances ([ddd3867](https://github.com/monotykamary/ypi/commit/ddd3867d14567ce6fbd08d6adc05460e092e7bb1))
+* jj workspace isolation for recursive child agents ([7237ede](https://github.com/monotykamary/ypi/commit/7237edea91d784dcde3381311a4c3da36f077a5d))
+* land.prose — end-of-session cleanup with compounding reflection ([55c276c](https://github.com/monotykamary/ypi/commit/55c276c7c54b5d9563a526719948323b885dacbd))
+* one-line installer script ([60d7f94](https://github.com/monotykamary/ypi/commit/60d7f9447fb0ee704ee07c088d9cbee2e9060ddd))
+* persist-system-prompt extension — saves effective system prompt to session files ([6776550](https://github.com/monotykamary/ypi/commit/67765504c4992a3341a775689c806c34dba8f004))
+* rewrite system prompt for QA + coding agent dual use ([f5f088d](https://github.com/monotykamary/ypi/commit/f5f088d38974ce77e6afcc9fb94144dd0b482abb))
+* rlm_cleanup — manual reaper for stale temp files and jj workspaces ([622cf24](https://github.com/monotykamary/ypi/commit/622cf24f6f0b3b1ff2565d9b8a2b10890fa1ef98))
+* rlm_query --async flag with --notify PID ([1ef9efd](https://github.com/monotykamary/ypi/commit/1ef9efd48fa145f53b06976a804614028cbf225d))
+* rlm_sessions shared session log reader ([1a8225d](https://github.com/monotykamary/ypi/commit/1a8225d7d9322ca9a46f4ed0f517edd1401d063b))
+* session tree — recursive children get persisted sessions ([bc0bbfb](https://github.com/monotykamary/ypi/commit/bc0bbfb4c788e11bed5f8582d314133ffaf86b8a))
+* structured errors, graceful exit, execution summary ([c050941](https://github.com/monotykamary/ypi/commit/c05094157249a22a06696b0767c0017d6804022b))
+* symbolic access (RLM_PROMPT_FILE), remove hardcoded provider/model, incorporate-insight.prose, land.prose e2e gate, gemini-flash e2e default ([01399c0](https://github.com/monotykamary/ypi/commit/01399c08170ae6c843097c6a8ea36bf21457f1b9))
+* timestamps extension — gives agents time awareness ([c8bc23e](https://github.com/monotykamary/ypi/commit/c8bc23ee12a3580281ddda040276b1e38dcf83ac))
+* timestamps extension — gives agents time awareness ([896e154](https://github.com/monotykamary/ypi/commit/896e1546b74b50fb18f6a5b98ec6ea77a0291e86))
+* unify local/CI quality gates and harden release workflows ([8ba079f](https://github.com/monotykamary/ypi/commit/8ba079f4e591814ace260f663d60f9a791790c5e))
+
+
+### Bug Fixes
+
+* block broadcast sentinels in notify-done extension ([927a9ac](https://github.com/monotykamary/ypi/commit/927a9ac914632a9f05c634cf1e69d09d9a597d48))
+* correct max-depth description — leaf nodes get full tools, just no rlm_query ([4bcdd9a](https://github.com/monotykamary/ypi/commit/4bcdd9af337734bd0d6228db76a8139406033a7e))
+* fork_peer and fresh_peer spawn ypi when parent is ypi ([141a49d](https://github.com/monotykamary/ypi/commit/141a49de8efa423db1f2c9fee736e61fce66f434))
+* kill orphan parser processes after timeout E2E test, add contrib extensions (colgrep, dirpack, treemap), experiment results ([c641467](https://github.com/monotykamary/ypi/commit/c641467b50ebc550fb0a20d2ca050432690cdd33))
+* notify-done extension — use steer for busy agents, display: true, add integration tests ([7316413](https://github.com/monotykamary/ypi/commit/7316413a715f172bc1eb4307dc3f202313575688))
+* plug /tmp leak in rlm_query — add reaper + async jj cleanup ([18c8dea](https://github.com/monotykamary/ypi/commit/18c8dea699b7fd0c5cb5504cea164d5dccab8e8e))
+* preserve inherited CONTEXT when CI exposes empty stdin pipe ([14ced47](https://github.com/monotykamary/ypi/commit/14ced4773c8f2b44077e9482240cf205c47e0c87))
+* re-register pi-mono submodule after history rewrite ([d0b1e78](https://github.com/monotykamary/ypi/commit/d0b1e78a7c6cfca7f255ad9fe4314e41709558ee))
+* require YPI_INSTANCE_ID in sentinel filenames, add cross-instance isolation test ([f7bdd5d](https://github.com/monotykamary/ypi/commit/f7bdd5d02c16ced73c8b628b6c9d43436b3e0c19))
+* resolve symlinks in SCRIPT_DIR for npm global install ([bbc4cb9](https://github.com/monotykamary/ypi/commit/bbc4cb9bccf22eda59ad0d2e901fa1a2f0186bfc))
+* rlm_cleanup empty-list counting bug ([cf53412](https://github.com/monotykamary/ypi/commit/cf534122892e81fe64747d9074cd5af286b8811d))
+* self-experiment.prose — concurrent conditions, use Pi session dir ([b3eb33c](https://github.com/monotykamary/ypi/commit/b3eb33c17f36d20edbf27816ea0ca3923a5d5ebb))
+* unbound variable errors with empty arrays and Unicode arrow ([83d3682](https://github.com/monotykamary/ypi/commit/83d368257ebaaeeafe00521fc57b90ab7a20fb2b))
+* **ypi:** use portable mktemp for BSD/GNU compatibility ([aab4080](https://github.com/monotykamary/ypi/commit/aab4080dad8568a4fbcf472fba0e480e39088e2d))
 
 ## [0.5.0] - 2026-02-15
 
