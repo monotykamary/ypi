@@ -66,7 +66,8 @@ mkdir -p "$RLM_SESSION_DIR"
 
 # Build combined system prompt: SYSTEM_PROMPT.md + rlm_query source
 # This way the agent sees the full implementation, not just usage docs.
-COMBINED_PROMPT=$(mktemp /tmp/ypi_system_prompt_XXXXXX.md)
+COMBINED_PROMPT=$(mktemp "${TMPDIR:-/tmp}/ypi_system_prompt.XXXXXX")
+COMBINED_PROMPT="${COMBINED_PROMPT}.md"
 trap 'rm -f "$COMBINED_PROMPT"' EXIT
 
 cat "$SCRIPT_DIR/SYSTEM_PROMPT.md" > "$COMBINED_PROMPT"
